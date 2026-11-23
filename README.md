@@ -2,7 +2,13 @@
 
 Browser-based mapping of biological occurrence records worldwide. SPTopo runs as a static site with HTML, CSS and JavaScript. CSV records stay in browser memory.
 
-To run SPTopo locally, run `python3 -m http.server 8000 --directory dist` from the repository root and open http://localhost:8000/.
+## Use SPTopo online
+
+[Open the SPTopo web app](https://ychsiao-tw.github.io/SPTopo/)
+
+Import a UTF-8 CSV with longitude and latitude columns. Add an optional species or group column to style records by group. Choose a basemap and layers, customize the symbols and legend, and export the map as PNG, SVG, or PDF. Download the editable R package to reproduce and revise the map in R.
+
+##To run SPTopo locally, run `python3 -m http.server 8000 --directory dist` from the repository root and open http://localhost:8000/.
 
 ## Mapping
 
