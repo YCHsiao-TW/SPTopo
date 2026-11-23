@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {createRequire} from 'node:module';
+import {ANALYSIS_DEFAULTS,summarizeElevations} from '../dist/elevation-analysis.mjs';
+import {renderElevationChart} from '../dist/elevation-chart.mjs';
+import {pngBlob,pdfBlob} from '../dist/export.mjs';
+const native=createRequire(import.meta.url)(path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES,'@napi-rs/canvas'));
+globalThis.Path2D=native.Path2D;globalThis.document={createElement:()=>native.createCanvas(1,1)};
+const rows=[-100,0,1000,3000].map((value,i)=>({group:'Species A',lon:121+i/100,lat:24,value,line:i}));
+const stats=summarizeElevations(rows,['Species A','Species B'],'records');
+const scene={language:'en',analysis:{...ANALYSIS_DEFAULTS,title:'A < B & elevation',unit:'records',bandLabels:'Low|Middle|High'},stats,colors:{'Species A':'#0072b2'},shapes:{'Species A':'triangle'},displayNames:{'Species A':'Taxon <alpha>'},settings:{italic:true},demo:true};
+const r=renderElevationChart(scene,{width:1500});
+assert.equal(r.canvas.width,1500);assert.equal(r.canvas.height,1125);assert.match(r.svg,/A &lt; B &amp; elevation/);assert.match(r.svg,/Taxon &lt;alpha&gt;/);assert.ok(!r.svg.includes('<alpha>'));
+assert.match(r.svg,/data-marker-shape="triangle"/);assert.match(r.svg,/n = 4/);assert.match(r.svg,/n = 0/);assert.match(r.svg,/font-style="italic"/);assert.match(r.svg,/DEMO DATA/);
+assert.equal(r.metadata.quantiles,'R type 7');assert.equal(r.metadata.whiskers,'min-max');assert.equal(r.metadata.statistics[0].min,-100);assert.equal(r.metadata.statistics[0].median,500);
+assert.ok(!/\bNaN\b|\bInfinity\b/.test(r.svg));assert.match(r.svg,/>-500</);assert.match(r.svg,/>Low</);
+const empty=renderElevationChart({...scene,stats:summarizeElevations([],['Species A'])},{width:1500});assert.match(empty.svg,/No elevation data to plot yet/);
+const large=renderElevationChart({...scene,stats:[{...stats[0],n:7000,values:Array.from({length:7000},(_,i)=>({key:String(i),value:i%2000}))}]});assert.equal(large.metadata.pointStride,2);assert.equal(large.metadata.statistics[0].n,7000);
+// The native canvas and browser exports share the same SVG/Canvas Painter.
+r.canvas.toBlob=fn=>fn(new Blob([r.canvas.toBuffer('image/png')],{type:'image/png'}));
+const png=new Uint8Array(await (await pngBlob(r.canvas,'chart test',r.page)).arrayBuffer());assert.deepEqual([...png.slice(0,8)],[137,80,78,71,13,10,26,10]);
+const pdf=await pdfBlob(r.canvas,'chart test',r.page).text();assert.ok(pdf.startsWith('%PDF'));assert.ok(pdf.includes('/MediaBox'));
+await fs.mkdir(new URL('../qa/',import.meta.url),{recursive:true});await fs.writeFile(new URL('../qa/elevation-chart.png',import.meta.url),r.canvas.toBuffer('image/png'));await fs.writeFile(new URL('../qa/elevation-chart.svg',import.meta.url),r.svg);
+console.log('PASS: shared chart rendering, quantiles, negative elevations, assigned symbols, escaped names/titles, counts, empty/demo states, plotting stride, PNG and PDF');

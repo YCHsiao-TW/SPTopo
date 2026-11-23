@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import {ANALYSIS_DEFAULTS,DEM_ZOOM,elevationColumn,numericElevation,quantile,parseBands,validateAnalysis,elevationRows,summarizeElevations,pointPixel,sampleElevations} from '../dist/elevation-analysis.mjs';
+
+const options=()=>structuredClone(ANALYSIS_DEFAULTS);
+for(const value of ['',null,undefined,'NA',false,'12000',Infinity])assert.equal(numericElevation(value),null);
+assert.equal(numericElevation(' 0 '),0);assert.equal(numericElevation(-432),-432);
+assert.equal(elevationColumn(['name','altitude_m']),'altitude_m');assert.equal(elevationColumn(['高程']),'高程');
+assert.equal(quantile([0,10,20,30],.25),7.5);assert.equal(quantile([7],.75),7);assert.equal(quantile([],.5),null);
+assert.deepEqual(parseBands('-500,0,1000,9000'),[-500,0,1000,9000]);
+for(const bad of ['0,0,10','0,,10','9000,0','0,NaN','0'])assert.throws(()=>parseBands(bad));
+const a={...options(),column:'elevation',samples:{'121,24':120,'122,25':200}};
+const points=[{lon:121,lat:24,group:'A',line:2,row:['0']},{lon:121,lat:24,group:'A',line:3,row:['100']},{lon:122,lat:25,group:'A',line:4,row:['300']},{lon:122,lat:25,group:'B',line:5,row:['']},{lon:123,lat:26,group:'B',line:6,row:['bad']}];
+let rows=elevationRows(points,['elevation'],a);
+assert.deepEqual(rows.map(r=>r.value),[0,100,300,null,null]);assert.equal(rows[0].difference,-120);
+assert.deepEqual(elevationRows(points,['elevation'],{...a,source:'dem'}).map(r=>r.value),[120,120,200,200,null]);
+assert.deepEqual(elevationRows(points,['elevation'],{...a,source:'fill'}).map(r=>r.value),[0,100,300,200,null]);
+assert.ok(elevationRows(points,[],a).every(r=>r.value===null),'No guessed elevation column');
+const sites=summarizeElevations(rows,['A','B'],'sites'),records=summarizeElevations(rows,['A'],'records')[0];
+assert.deepEqual([sites[0].n,sites[0].records,sites[0].min,sites[0].median,sites[0].max],[2,3,50,175,300]);
+assert.deepEqual([records.n,records.q1,records.median,records.q3],[3,50,100,200]);assert.equal(sites[1].n,0);assert.equal(sites[1].median,null);
+assert.equal(DEM_ZOOM,12);assert.equal(pointPixel({lon:180,lat:0}).key,'12/4095/2048');assert.equal(pointPixel({lon:-180,lat:0}).key,'12/0/2048');
+const pixels=new Uint8ClampedArray(256*256*4);for(let i=0;i<pixels.length;i+=4){pixels[i]=128;pixels[i+1]=123;pixels[i+2]=128;pixels[i+3]=255;}
+const samplePoints=Array.from({length:9},(_,i)=>({lon:i*10,lat:10}));let calls=0,active=0,peak=0;const progress=[];
+const sampled=await sampleElevations([...samplePoints,samplePoints[0]],{loadTile:async()=>{calls++;peak=Math.max(peak,++active);await new Promise(r=>setImmediate(r));active--;return pixels;},onProgress:p=>progress.push(p)});
+assert.equal(calls,9);assert.equal(peak,4);assert.equal(Object.keys(sampled.samples).length,9);assert.ok(Object.values(sampled.samples).every(v=>v===123.5));assert.equal(progress.at(-1).done,9);
+await sampleElevations(samplePoints,{samples:sampled.samples,loadTile:()=>{throw Error('Cached coordinates must not load');}});
+const failed=await sampleElevations([samplePoints[0],samplePoints[0]],{loadTile:async()=>{throw Error('offline');}});assert.equal(failed.failures.length,1);assert.deepEqual(failed.samples,{});
+const ac=new AbortController();ac.abort();let loaded=false;const cancelled=await sampleElevations(samplePoints,{signal:ac.signal,loadTile:async()=>{loaded=true;return pixels;}});assert.equal(cancelled.cancelled,true);assert.equal(loaded,false);
+assert.deepEqual(validateAnalysis(undefined),options());const saved=structuredClone(a);assert.deepEqual(validateAnalysis(a),saved);
+for(const bad of [null,[],{source:'automatic'},{font:100},{samples:{'190,20':100}},{samples:{'121,24':null}},{bands:'true'}])assert.throws(()=>validateAnalysis(bad));
+console.log('PASS: original/DEM selection, zero and missing values, type-7 quartiles, duplicate-site medians, fixed-grid sampling, cache, concurrency, failures, cancellation and saved analysis validation');

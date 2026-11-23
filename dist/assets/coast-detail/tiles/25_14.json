@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","bbox":[70.0,50.0,80.0,60.0],"properties":{"kind":"land"},"geometry":{"type":"Polygon","coordinates":[[[70.0,50.0],[70.0,60.0],[80.0,60.0],[80.0,50.0],[70.0,50.0]]]}}]}

@@ -1,0 +1,5 @@
+Logo: https://top-o-map.com/top-o-map.png
+Provider integration instructions: https://top-o-map.com/map-integration.html
+Tiles: https://tile.top-o-map.com/{z}/{x}/{y}.png (max zoom 17)
+Map data: OpenStreetMap contributors, ODbL. Elevation: Copernicus, Sonny. Style: OpenTopoMap, CC-BY-SA 3.0. Provider: Top-O-Map.
+Free service may add watermarks and throttle requests; only visible viewport tiles are loaded. No offline tile archive.
