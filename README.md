@@ -112,3 +112,7 @@ New maps start with pale-blue ocean fill and county/township boundaries disabled
 ### Land contours
 
 Style → Advanced terrain settings includes an independent land-contour switch (off by default) and 100/200/250/500/1000 m intervals. Contours use the current Terrain Tiles DEM, bilinear sampling and marching squares, clipped to the selected land mask. Elevation labels (metres) appear on sufficiently long contours, prioritizing index contours and avoiding nearby labels and sample points. Labels use plain grey text without halos and sparse placement. The same logical geometry is used in the preview, PNG/PDF and vector SVG, and included in the R basemap. DEM coverage is limited to approximately 85° S–85° N; sampling and source resolution limit detail. Settings and projects preserve both controls; legacy files default to off. OSM pauses these overlays without discarding preferences.
+
+## License
+
+SPTopo's original source code and R map templates are licensed under the [MIT License](LICENSE). Third-party software, fonts, and geospatial datasets remain subject to their respective licenses and attribution requirements. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
