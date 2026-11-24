@@ -2,7 +2,8 @@ cff-version: 1.2.0
 message: "If you use SPTopo in your research, please cite the archived release."
 title: "SPTopo"
 type: software
-version: "1.0.0"
+version: "1.0.1"
+license: MIT
 abstract: >-
   SPTopo is a browser-based tool for producing topographic maps of biological
   occurrence records. It supports map layers for land and water, configurable
