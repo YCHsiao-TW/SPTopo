@@ -1,6 +1,25 @@
 <!DOCTYPE html>
 
-<html lang="zh-Hant"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><meta content="#244c3e" name="theme-color"/><meta content="上傳 CSV，製作全球及臺灣的地形與物種分布圖，支援共域圓餅及 PNG、SVG、PDF 匯出。" name="description"/><title>SPTopo｜全球互動製圖</title><link href="./assets/favicon.svg" rel="icon" type="image/svg+xml"/><link href="./style.css?r=csv-encoding" rel="stylesheet"/></head>
+<html lang="zh-Hant"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><meta content="#244c3e" name="theme-color"/><meta content="上傳 CSV，製作全球及臺灣的地形與物種分布圖，支援共域圓餅及 PNG、SVG、PDF 匯出。" name="description"/><title>SPTopo｜全球互動製圖</title><link href="./assets/favicon.svg" rel="icon" type="image/svg+xml"/><link href="./style.css?r=csv-encoding" rel="stylesheet"/><style id="citation-link-style">
+  .brand-group .author-contact { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+  .brand-group .citation-link { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; color: inherit; font-weight: 600; text-decoration: none; white-space: nowrap; }
+  .brand-group .citation-link:is(:hover, :focus-visible) { background: #edf2e7; }
+  .citation-link > span { display: none; }
+  @media (max-width: 800px) { .topbar .brand-group { flex-wrap: wrap; } }
+  @media (max-width: 600px) { .brand-group .citation-link { font-size: .75rem; } }
+  html[lang="zh-Hant"] .citation-link > span[lang="zh-Hant"],
+  html[lang="zh-Hans"] .citation-link > span[lang="zh-Hans"],
+  html[lang="en"] .citation-link > span[lang="en"],
+  html[lang="es"] .citation-link > span[lang="es"],
+  html[lang="fr"] .citation-link > span[lang="fr"],
+  html[lang="de"] .citation-link > span[lang="de"],
+  html[lang="ja"] .citation-link > span[lang="ja"],
+  html[lang="ko"] .citation-link > span[lang="ko"],
+  html[lang="ru"] .citation-link > span[lang="ru"],
+  html[lang="ar"] .citation-link > span[lang="ar"],
+  html[lang="hi"] .citation-link > span[lang="hi"] { display: inline; }
+</style>
+</head>
 <body>
 <header class="topbar"><div class="brand-group"><a aria-label="SPTopo 首頁" class="brand" href="./"><svg aria-hidden="true" viewBox="0 0 40 40"><rect fill="#244c3e" height="40" rx="11" width="40"></rect><circle cx="20" cy="20" fill="none" r="13" stroke="#edf3df" stroke-width="1.5"></circle><ellipse cx="20" cy="20" fill="none" rx="6" ry="13" stroke="#c7d1ae" stroke-width="1.1"></ellipse><path d="M7 20h26M10 12c6 4 14 4 20 0M10 28c6-4 14-4 20 0" fill="none" stroke="#c7d1ae" stroke-width="1.1"></path><circle cx="27" cy="12" fill="#e5b85c" r="2.6"></circle></svg><span>SPTopo<small>全球生物地形地圖</small></span></a><div class="author-contact">
   <details>
@@ -17,8 +36,20 @@
         <div class="author-links"><a href="mailto:fsh@snm.ku.dk">fsh@snm.ku.dk</a><a href="mailto:fangshuo_hu@smail.nchu.edu.tw">fangshuo_hu@smail.nchu.edu.tw</a><a href="https://orcid.org/0000-0003-1269-8904">ORCID 0000-0003-1269-8904</a></div>
       </li>
     </ul>
-  <p class="author-links" data-user-content><a href="./cite.html">如何引用｜How to cite</a></p>
   </details>
+  <a class="citation-link" href="./cite.html" data-user-content>
+    <span lang="zh-Hant">如何引用</span>
+    <span lang="zh-Hans">如何引用</span>
+    <span lang="en">How to cite</span>
+    <span lang="es">Cómo citar</span>
+    <span lang="fr">Comment citer</span>
+    <span lang="de">So zitieren Sie SPTopo</span>
+    <span lang="ja">引用方法</span>
+    <span lang="ko">인용 방법</span>
+    <span lang="ru">Как цитировать</span>
+    <span lang="ar">كيفية الاستشهاد</span>
+    <span lang="hi">उद्धरण कैसे दें</span>
+  </a>
 </div></div><div class="header-end"><label class="language-control" dir="ltr" for="languageSelect"><span id="languageLabel" data-user-content lang="en">🌐 Language</span><select id="languageSelect" aria-labelledby="languageLabel" dir="ltr"><option value="zh-Hant">繁體中文</option><option value="zh-Hans">简体中文</option><option value="en">English</option><option value="es">Español</option><option value="fr">Français</option><option value="de">Deutsch</option><option value="ja">日本語</option><option value="ko">한국어</option><option value="ru">Русский</option><option value="ar">العربية</option><option value="hi">हिन्दी</option></select></label><button aria-label="Switch to English" aria-pressed="false" class="quiet language-switch" hidden="" id="languageBtn" title="English" type="button">EN</button><button class="quiet" id="infoBtn">使用說明</button><button class="primary" id="topExport">匯出地圖 <span aria-hidden="true">↗</span></button></div></header>
 <main class="workspace">
 <aside aria-label="地圖設定" class="sidebar">
