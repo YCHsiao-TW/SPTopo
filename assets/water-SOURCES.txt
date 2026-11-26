@@ -1,5 +1,5 @@
 Natural Earth water layers, Public Domain.
-Bathymetry 4.1.0 (SRTM Plus), rivers and lakes 5.0.0.
+Bathymetry 4.1.0 (SRTM Plus).
 Original scale 1:10,000,000; simplified for browser cartography.
 Depth bands are generalized ranges, not point measurements. No lake bathymetry is implied. Not for navigation or local habitat assessment.
 {
@@ -13,7 +13,7 @@ Depth bands are generalized ranges, not point measurements. No lake bathymetry i
     180,
     85
   ],
-  "simplification": "topology-preserving; bathymetry 0.01 degrees; rivers/lakes 0.005 degrees; rounded to 5 decimals",
+  "simplification": "topology-preserving; bathymetry 0.01 degrees; rounded to 5 decimals",
   "urls": [
     "https://www.naturalearthdata.com/downloads/10m-physical-vectors/10m-bathymetry/",
     "https://www.naturalearthdata.com/downloads/10m-physical-vectors/10m-rivers-lake-centerlines/",

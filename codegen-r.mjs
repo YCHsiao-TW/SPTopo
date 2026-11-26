@@ -2,20 +2,14 @@ import {editableSettings} from './codegen-editable.mjs?r=mixed-italics';
 export function mapR(state,{width=3000}={}){
  const c=editableSettings(state,width);
  return String.raw`# SPTopo — editable geographic map, version 4
-# Run install_packages.R once. Source this file or run Rscript map.R.
-# Chinese: 修改下方設定或 config.json；更換 occurrences.csv 後直接重跑。
-# No screenshot or fixed map_x/map_y positions are used.
+# Run install_packages.R once, then Rscript map.R.
+# Set map bounds, projection and dimensions below. Edit other settings in config.json.
 overrides <- list(
   bounds = c(${c.bounds.map(v=>Number(v.toFixed(6))).join(', ')}), # west,south,east,north; east<west crosses dateline
   projection = "${c.projection}", # mercator / equalEarth / robinson
   central_meridian = ${Number(c.central_meridian.toFixed(6))},
   output_width_cm = ${c.output_width_cm}, output_height_cm = ${c.output_height_cm},
   output_pixels = ${width}
-  # , terrain = TRUE, bathymetry = FALSE, countries = TRUE, country_labels = TRUE
-  # , rivers = TRUE, lakes = TRUE, land_contours = TRUE, contour_interval = 200
-  # , font_file = "/path/to/font.ttf" # optional custom font for Unicode labels
-  # , coast_detail = TRUE # use FALSE for the generalized coastline
-  # , point_size = 7, legend = TRUE, dem_zoom = 6, allow_download = TRUE
 )
 # Set overrides <- list() to use config.json without overrides.
 
@@ -82,6 +76,7 @@ read_utf8_csv <- function(path){
  utils::read.csv(connection,encoding="UTF-8",colClasses="character",check.names=FALSE)
 }
 
+layout_spec<-jsonlite::fromJSON("layout.json",simplifyVector=FALSE)
 notes <- jsonlite::fromJSON("export_notes.json")
 if(length(notes)) warning(paste(notes, collapse="\n"), call.=FALSE)
 stopifnot(length(cfg$bounds)==4, all(is.finite(cfg$bounds)), cfg$bounds[2]<cfg$bounds[4], cfg$bounds[2]>=-85, cfg$bounds[4]<=85,
@@ -229,7 +224,7 @@ if(cfg$terrain || cfg$bathymetry || cfg$land_contours){
   stops<-if(cfg$terrain) palettes$elevation else list()
   if(cfg$bathymetry) stops<-c(lapply(rev(palettes$depth),function(a) list(-a[[1]],a[[2]])),stops)
   zz<-vapply(stops,function(a)as.numeric(a[[1]]),numeric(1));cc<-vapply(stops,function(a)a[[2]],character(1));keep<-!duplicated(zz,fromLast=TRUE);zz<-zz[keep];cc<-cc[keep]
-  p<-p+geom_raster(data=rd,aes(x=x,y=y,fill=elevation))+scale_fill_gradientn(colours=cc,values=(zz-min(zz))/diff(range(zz)),limits=range(zz),oob=scales::squish,breaks=if(cfg$bathymetry)seq(ceiling(min(zz)/1000)*1000,max(zz),by=1000) else seq(0,max(zz),by=1000),name=if(cfg$language=="zh-Hant")"海拔（m）" else "Elevation (m)",guide=if(cfg$legend)guide_colourbar(barheight=grid::unit(min(cfg$output_height_cm*.45,if(cfg$bathymetry)7 else 5),"cm"),theme=theme(legend.text=element_text(face="plain",size=8)),order=2) else "none")
+  p<-p+geom_raster(data=rd,aes(x=x,y=y,fill=elevation))+scale_fill_gradientn(colours=cc,values=(zz-min(zz))/diff(range(zz)),limits=range(zz),oob=scales::squish,breaks=if(cfg$bathymetry)seq(ceiling(min(zz)/1000)*1000,max(zz),by=1000) else seq(0,max(zz),by=1000),name=cfg$figure_labels$elevation,guide=if(cfg$legend)guide_colourbar(barheight=grid::unit(min(cfg$output_height_cm*.45,if(cfg$bathymetry)7 else 5),"cm"),theme=theme(legend.text=element_text(face="plain",size=8)),order=2) else "none")
  }
  if(cfg$hillshade && cfg$terrain){
   slope<-terrain(dem,"slope",unit="radians");aspect<-terrain(dem,"aspect",unit="radians")
@@ -243,17 +238,39 @@ if(cfg$terrain || cfg$bathymetry || cfg$land_contours){
  }
 }
 p<-p+geom_sf(data=shore,fill=NA,colour="#657c54",linewidth=.18)
-for(entry in list(c("countries","country-borders.geojson"),c("provinces","provinces.geojson"),c("counties","counties.geojson"),c("towns","towns.geojson"))){
+for(entry in list(c("countries","country-borders.geojson"),c("provinces","provinces.geojson"))){
  if(!isTRUE(cfg[[entry[1]]])) next
- if(isTRUE(cfg$coast_detail) && entry[1] %in% c("counties","towns")){
-  if(!nrow(land)) next
-  lines<-read_layer(paste0(entry[1],"-interior.geojson"))
-  lines<-suppressWarnings(st_intersection(lines,st_union(st_geometry(land))))
- } else lines<-read_layer(entry[2])
- p<-p+geom_sf(data=lines,fill=NA,colour="#687560",linewidth=.15)
+ p<-p+geom_sf(data=read_layer(entry[2]),fill=NA,colour="#687560",linewidth=.15)
 }
-if(cfg$lakes) p<-p+geom_sf(data=read_layer("lakes.geojson"),fill="#80c2dc",colour="#4a8fb3",linewidth=.12)
-if(cfg$rivers) p<-p+geom_sf(data=read_layer("rivers.geojson"),colour="#4a8fb3",linewidth=.18)
+freshwater <- NULL
+freshwater_credit <- NULL
+if(isTRUE(cfg$freshwater)){
+ if(!file.exists("freshwater-source.json") || !file.exists("freshwater.geojson"))
+  stop("Freshwater files are missing. Export a new SPTopo ZIP for this view.")
+ freshwater <- jsonlite::fromJSON("freshwater-source.json",simplifyVector=FALSE)
+ if(max(abs(unlist(freshwater$bounds)-cfg$bounds))>2e-6 ||
+    !identical(freshwater$projection,cfg$projection) ||
+    abs(freshwater$central_meridian-cfg$central_meridian)>2e-6)
+  stop("The freshwater layer is fixed to the exported view. Export a new SPTopo ZIP for a different extent or projection.")
+ freshwater_credit <- paste(freshwater$source$attribution,freshwater$source$copyright,sep=" · ")
+ if(freshwater$features>0)water_features<-st_read("freshwater.geojson",quiet=TRUE)
+ if(freshwater$features>0)for(style in c("seasonal-area","area","seasonal-line","stream","river","main")){
+  ink <- freshwater$styles[[style]]
+  layer <- water_features[water_features$style==style,]
+  if(!nrow(layer))next
+  layer <- project_layer(layer)
+  target <- if(is.null(ink$fill))"LINESTRING" else "POLYGON"
+  accepted <- if(is.null(ink$fill))c("LINESTRING","MULTILINESTRING") else c("POLYGON","MULTIPOLYGON")
+  layer <- layer[st_geometry_type(layer) %in% accepted,]
+  if(!nrow(layer))next
+  layer <- suppressWarnings(st_cast(layer,target))
+  layer <- layer[!st_is_empty(layer),]
+  if(nrow(layer)){
+   if(is.null(ink$fill))p<-p+geom_sf(data=layer,colour=ink$stroke,linewidth=ink$width*cfg$output_width_cm/layout_spec$page$width*10)
+   else p<-p+geom_sf(data=layer,fill=ink$fill,colour=NA)
+  }
+ }
+}
 if(cfg$country_labels && nrow(countries)){
  disputes<-st_geometry(read_layer("disputes.geojson"))
  has_disputes<-length(disputes)>0L && any(!st_is_empty(disputes))
@@ -327,7 +344,7 @@ if(length(marker_data)){
  grobs<-lapply(shapes[[shape]],function(r){q<-matrix(as.numeric(unlist(r)),ncol=2,byrow=TRUE);grid::polygonGrob(x=.5+.3*q[,1],y=.5-.3*q[,2],gp=gp)})
  do.call(grid::grobTree,grobs)
  })
- p<-p+scale_colour_manual(values=setNames(rep("#26372b",nrow(taxa)),taxa$taxon),breaks=taxa$taxon,labels=taxa$display_name,name=if(cfg$language=="zh-Hant")"物種" else "Species",guide=if(cfg$legend)guide_legend(override.aes=list(fill=taxa$color),order=1) else "none")
+ p<-p+scale_colour_manual(values=setNames(rep("#26372b",nrow(taxa)),taxa$taxon),breaks=taxa$taxon,labels=taxa$display_name,name=cfg$figure_labels$taxa,guide=if(cfg$legend)guide_legend(override.aes=list(fill=taxa$color),order=1) else "none")
 }
 if(cfg$site_ids && nrow(sites)){ids<-!duplicated(paste(sites$longitude,sites$latitude));ss<-sites[ids,];ss$site_id<-seq_len(nrow(ss));p<-p+geom_sf_text(data=ss,aes(label=site_id),nudge_y=radius*1.6,size=2.8)}
 if(cfg$north_arrow){
@@ -363,7 +380,6 @@ if(cfg$scale_bar){
 p<-p+coord_sf(crs=crs_out,xlim=xr,ylim=yr,expand=FALSE,datum=if(isTRUE(cfg$frame)||cfg$grid)st_crs(4326) else NA)+labs(x=NULL,y=NULL)+theme_minimal()+theme(panel.grid=if(cfg$grid)element_line(colour="#dddddd") else element_blank(),panel.background=element_rect(fill=if(cfg$ocean||cfg$bathymetry)"#e6f4f7" else "white",colour=NA),panel.border=if(cfg$frame)element_rect(colour="#65745f",fill=NA,linewidth=.5) else element_blank(),legend.text=element_text(face=if(cfg$italic)"italic" else "plain"),legend.key.height=grid::unit(.6,"cm"))
 if(cfg$demo)p<-p+labs(caption="DEMONSTRATION DATA — synthetic records")
 # Use the website's page coordinates for independent legends and map margins.
-layout_spec<-jsonlite::fromJSON("layout.json",simplifyVector=FALSE)
 W<-layout_spec$page$width; H<-layout_spec$page$height
 pt<-cfg$output_width_cm/2.54*72/W
 p<-p+theme(legend.position="none",plot.margin=margin(0,0,0,0),
@@ -418,14 +434,19 @@ gt$heights<-grid::unit(rep(0,length(gt$heights)),"pt");gt$heights[panel$t]<-grid
   }
  }
  if(cfg$demo)text_at("DEMONSTRATION DATA — synthetic records",box$x,H-10,9)
- if(!is.null(coast_credit))grid::grid.text(coast_credit,x=.985,y=grid::unit(5,"pt"),just=c("right","bottom"),gp=grid::gpar(fontsize=8*pt,col="#33452e"))
+ credit<-if(is.null(coast_credit))freshwater_credit else coast_credit
+ if(!is.null(credit))grid::grid.text(credit,x=.985,y=grid::unit(5,"pt"),just=c("right","bottom"),gp=grid::gpar(fontsize=8*pt,col="#33452e"))
  if(!cfg$legend)return(invisible(NULL))
  for(block in layout_spec$legends){
  kind<-block$kind;st<-block$style;x<-block$x;y<-block$y
  family<-switch(st$family,serif="serif",mono="mono","sans")
  title<-st$title
- if(!nzchar(title))title<-if(cfg$language=="zh-Hant")switch(kind,taxa="物種",elevation="海拔（m）",depth="海深（m）",water="河湖",kind) else switch(kind,taxa="Species",elevation="Elevation (m)",depth="Depth (m)",water="Water",kind)
- if(!kind%in%c("taxa","elevation","depth"))next
+ if(!nzchar(title)){
+  label<-cfg$figure_labels[[kind]]
+  title<-if(is.null(label)) kind else label
+ }
+ if(!kind%in%c("taxa","elevation","depth","water"))next
+ if(kind=="water"&&(is.null(freshwater)||isFALSE(cfg$legend_water)))next
  if(kind=="taxa"&&isFALSE(cfg$legend_species) || kind=="elevation"&&(!cfg$terrain||isFALSE(cfg$legend_elevation)) || kind=="depth"&&(!cfg$bathymetry||isFALSE(cfg$legend_depth)))next
  if(isTRUE(st$background)||isTRUE(st$border))grid::grid.rect(x=(x+block$w/2)/W,y=1-(y+block$h/2)/H,width=block$w/W,height=block$h/H,gp=grid::gpar(fill=if(st$background)"white" else NA,col=if(st$border)st$color else NA))
  text_at(title,x+10,y+max(24,st$titleFont+6),st$titleFont,family,font_face(st$titleBold,st$titleItalic),st$color)
@@ -440,6 +461,13 @@ gt$heights<-grid::unit(rep(0,length(gt$heights)),"pt");gt$heights[panel$t]<-grid
  }
  text_at(taxa$display_name[i],cx+max(19,r+12),cy+4,min(st$font,gap*.65),family,font_face(st$bold,st$italic),st$color,max_width=min(170,W-cx-25),runs=st$nameRuns[[taxa$taxon[i]]])
  }
+ }else if(kind=="water"){
+ cy<-y+max(43,st$titleFont+st$font+12)
+ cx<-x+10+block$waterColumn
+ grid::grid.segments((x+10)/W,1-(cy-4)/H,(x+24)/W,1-(cy-4)/H,gp=grid::gpar(col=freshwater$styles$main$stroke,lwd=1.1*pt))
+ text_at(cfg$figure_labels$water_rivers,x+31,cy,st$font,family,"plain",st$color)
+ grid::grid.rect((cx+6.5)/W,1-(cy-6.5)/H,13/W,9/H,gp=grid::gpar(fill=freshwater$styles$area$fill,col=NA))
+ text_at(cfg$figure_labels$water_lakes,cx+20,cy,st$font,family,"plain",st$color)
  }else{
  ramp<-palettes[[kind]];z<-vapply(ramp,function(a)as.numeric(a[[1]]),numeric(1));cc<-vapply(ramp,function(a)a[[2]],character(1));ord<-order(z);z<-z[ord];cc<-cc[ord]
  vals<-seq(min(z),max(z),length.out=512);rgb<-grDevices::col2rgb(cc)
@@ -464,8 +492,17 @@ for(format in c("png","pdf","svg")){
  tryCatch({showtext::showtext_begin();tryCatch(render_page(),finally=showtext::showtext_end())},finally=grDevices::dev.off())
 }
 cfg$coast_files <- coast_files
-coast_source <- if(is.null(coast_credit)) "Land mask and coastline: bundled Natural Earth land geometry." else c("Coastline and land mask",coast_credit,"License: ODbL 1.0",paste("Tiles:",paste(coast_files,collapse=", ")))
+coast_source <- if(!is.null(coast_credit)) {
+  c("Coastline and land mask",coast_credit,"License: ODbL 1.0",paste("Tiles:",paste(coast_files,collapse=", ")))
+} else {
+  "Land mask and coastline: Natural Earth Admin 0 Countries 5.1.1."
+}
 writeLines(coast_source,file.path(run_dir,"coastline_sources.txt"),useBytes=TRUE)
+if(!is.null(freshwater)){
+ cfg$freshwater_release<-freshwater$source$release
+ cfg$freshwater_lod<-freshwater$level
+ file.copy("freshwater-source.json",run_dir)
+}
 jsonlite::write_json(cfg,file.path(run_dir,"run_settings.json"),auto_unbox=TRUE,pretty=TRUE)
 write.csv(st_drop_geometry(sites),file.path(run_dir,"plotted_records.csv"),row.names=FALSE,fileEncoding="UTF-8")
 writeLines(capture.output(sessionInfo()),file.path(run_dir,"sessionInfo.txt"))

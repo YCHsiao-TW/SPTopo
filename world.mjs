@@ -1,15 +1,9 @@
 import {boundsOf} from './longitude.mjs';
-import {unproject,RAMP,WORLD_RAMP} from './core.mjs';
+import {WORLD_RAMP} from './core.mjs';
 export const WORLD_REGIONS={bering:[165,50,-145,73],world:[-180,-80,180,80],asia:[25,-15,180,80],westPacific:[95,-50,180,55],europe:[-25,34,45,72],africa:[-20,-36,55,38],americas:[-170,-60,-30,80],oceania:[110,-50,180,5]};
-export function worldMode(settings,camera,plot){
- if(settings.mapScope==='world')return true;
- if(settings.mapScope==='taiwan')return false;
- const s=256*2**camera.zoom,a=unproject(camera.x-plot.w/2/s,camera.y+plot.h/2/s),b=unproject(camera.x+plot.w/2/s,camera.y-plot.h/2/s);
- return a[0]<116||b[0]>126||a[1]<20||b[1]>28;
-}
 export function coordinateLabel(lon,lat){if(!Number.isFinite(lon)||!Number.isFinite(lat)||Math.abs(lon)>180||Math.abs(lat)>85)return '—';return `${Math.abs(lon).toFixed(5)}° ${lon<0?'W':'E'} / ${Math.abs(lat).toFixed(5)}° ${lat<0?'S':'N'}`;}
-export function elevationScale(settings,camera,plot){
- const globalMap=worldMode(settings,camera,plot),ramp=globalMap?WORLD_RAMP:RAMP,max=ramp.at(-1)[0];
+export function elevationScale(){
+ const ramp=WORLD_RAMP,max=ramp.at(-1)[0];
  return {ramp,max,ticks:Array.from({length:max/1000+1},(_,i)=>i*1000)};
 }
 export const BASEMAP_LATITUDE_LIMIT=85;

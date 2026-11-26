@@ -1,0 +1,162 @@
+[
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00000-d14f5ef8-68c6-537e-b641-dfa67795ce50-c000.zstd.parquet",
+    "bytes": 1736386156,
+    "etag": "66f912ce759632cb0d462ca159998339-26"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00001-8a1b3910-5ace-543e-83e4-3f63ed9c7779-c000.zstd.parquet",
+    "bytes": 788581280,
+    "etag": "feb5b5a07bbb252c4d2855a323d40f8b-12"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00002-1e0609db-92c2-540f-a2eb-b33cc97dce66-c000.zstd.parquet",
+    "bytes": 792925137,
+    "etag": "a4aa54f17bc8e023a6a271586d1f5dd6-12"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00003-49a9a070-9a7e-5c69-a82b-b859febdf2dd-c000.zstd.parquet",
+    "bytes": 920497892,
+    "etag": "71a11276227387ee334b074c0711e57f-14"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00004-14083be4-0908-5932-ada3-e2595daa6e0c-c000.zstd.parquet",
+    "bytes": 884664114,
+    "etag": "36d102c97745db525a290f562d7aeda3-14"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00005-23d0c561-cf7e-5cac-b434-ec659fc95a36-c000.zstd.parquet",
+    "bytes": 1220589787,
+    "etag": "7b22cef450ec80f8829bcc757e355739-19"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00006-db488b57-7240-551d-a770-ebf43da3f07f-c000.zstd.parquet",
+    "bytes": 1171096781,
+    "etag": "e9ad93ed26f30bfa2d92b824b074ce06-18"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00007-ba142e4d-9dfe-5ad8-8411-8fcfd1102271-c000.zstd.parquet",
+    "bytes": 880426989,
+    "etag": "1e7ac6efc35a6c8786250035d1920213-14"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00008-bf9785f7-505b-5ef2-9b45-cdea3ba2bc96-c000.zstd.parquet",
+    "bytes": 974923134,
+    "etag": "8a4949d64efaecb162019ea5eb1b3143-15"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00009-d1c67d48-b38c-50b9-9532-d4ab77cdd0fa-c000.zstd.parquet",
+    "bytes": 710834345,
+    "etag": "b009496276cbd1d87a39899f722fd776-11"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00010-6571b36c-7aed-567e-97d1-98a6e8a49cf3-c000.zstd.parquet",
+    "bytes": 659046439,
+    "etag": "96990cca5543592acfc242249cb042ce-10"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00011-bb856296-ce5c-5da2-ad9c-7453aaf449e2-c000.zstd.parquet",
+    "bytes": 583712782,
+    "etag": "2c1a788c9a18513b2c3a65858b6ec956-9"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00012-b99e04de-1b95-597b-bb90-ecd65eead9be-c000.zstd.parquet",
+    "bytes": 574149241,
+    "etag": "d6535bcc904071e340b4ee299d0911aa-9"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00013-f96281de-bf48-5b6c-a5b8-c3c2d91f9055-c000.zstd.parquet",
+    "bytes": 540693309,
+    "etag": "00589327ca6eb76d8fa469e3e98a019d-9"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00014-574d9614-b220-5894-8e7b-d4e2b2f27bff-c000.zstd.parquet",
+    "bytes": 625655196,
+    "etag": "f3d2f60e59e65b7aee8dd2593f10e9bc-10"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00015-94a901d9-0384-534c-a19c-1586c0a7e22d-c000.zstd.parquet",
+    "bytes": 817295814,
+    "etag": "c57fad4fa9011deca6c1c6a7a9f514a4-13"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00016-304fd045-4cf8-5ad1-bdf2-6f49d997964c-c000.zstd.parquet",
+    "bytes": 1029095100,
+    "etag": "3ea5f1ed79bff0d8dfca8de42dd50306-16"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00017-2594a8a9-c226-5722-bba5-2422c33dc1cc-c000.zstd.parquet",
+    "bytes": 1093856495,
+    "etag": "ff44b8f3f735f322e23fc190574a80aa-17"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00018-658135d3-10fd-5c44-b1f2-b81b25f4feff-c000.zstd.parquet",
+    "bytes": 636438578,
+    "etag": "6b092ab1c2e0962074ac508de8cedc42-10"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00019-bf87b3ca-ceb6-5b85-a0a1-28a5dc127037-c000.zstd.parquet",
+    "bytes": 560923591,
+    "etag": "56ce6ee7e308a542b4d6d35ee94318e6-9"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00020-921940c7-0812-5a4e-b4dc-8d803c5a3407-c000.zstd.parquet",
+    "bytes": 872851647,
+    "etag": "57968c64c6f547da47e40bb5afff7fd6-14"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00021-48bc295d-2222-55a8-b0a2-1dadc06959d9-c000.zstd.parquet",
+    "bytes": 737056759,
+    "etag": "ed6342d29f573e81cce33d996afb0657-11"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00022-90d9e58e-55b6-53a4-8ec1-2198da6d3cf0-c000.zstd.parquet",
+    "bytes": 431535043,
+    "etag": "14af570173b67878355791908f52095e-7"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00023-201e8c34-cb9d-5a4c-981f-3ee49ac01081-c000.zstd.parquet",
+    "bytes": 873943858,
+    "etag": "c0168d1682a2cab3febfb47eb1304d62-14"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00024-7a9b438d-978c-5e78-929a-7c2834eb0718-c000.zstd.parquet",
+    "bytes": 1340460168,
+    "etag": "91637cb455e5500e12ddef81fdef9379-20"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00025-cfab4865-c62d-596c-9e31-2bf08655ea3c-c000.zstd.parquet",
+    "bytes": 1228372490,
+    "etag": "79ce80b2534c6a00e4c778c94f4f3049-19"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00026-e8df9a98-8559-577d-a6d8-b066887804a3-c000.zstd.parquet",
+    "bytes": 1147459637,
+    "etag": "e483a03ec4044942de0a3c22f5390dc6-18"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00027-53ee8361-ab07-518a-a8da-e78c3e846bdd-c000.zstd.parquet",
+    "bytes": 938635099,
+    "etag": "45d4ad90b28135427cdf1a020efadac1-14"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00028-ec483221-e024-5256-a1a3-c9c943e5d742-c000.zstd.parquet",
+    "bytes": 624105615,
+    "etag": "cb49592708a33020803299aa2904c4bd-10"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00029-d62d9b6c-205c-5b0a-adb2-0c08837faa47-c000.zstd.parquet",
+    "bytes": 978290705,
+    "etag": "b37994cffcc2e023132faa89df545fa5-15"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00030-e5c560e9-407e-5289-9764-eb872b8b9a01-c000.zstd.parquet",
+    "bytes": 778542864,
+    "etag": "73565eebe73a6d1f1f2190e76b57e7b5-12"
+  },
+  {
+    "key": "release/2026-11-18.0/theme=base/type=water/part-00031-ecf78b6f-81ce-53a8-a4b9-cc922d142008-c000.zstd.parquet",
+    "bytes": 1813543796,
+    "etag": "854e86796f72b6ef78bfade18e2a76a6-28"
+  }
+]
