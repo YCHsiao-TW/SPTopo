@@ -68,7 +68,7 @@ $('worldDemo').addEventListener('click',worldDemo);
 function waterDemo(fresh=false){
  const rows=fresh?[['longitude','latitude','species'],[-87.1,44.6,'Freshwater species A'],[-85.6,47.2,'Freshwater species A'],[-81.8,42.3,'Freshwater species B'],[-82.5,44.4,'Freshwater species B'],[-77.8,43.6,'Freshwater species A']]:[['longitude','latitude','species'],[122.6,23.5,'Marine species A'],[125.5,25.2,'Marine species A'],[130,22,'Marine species B'],[132.5,29,'Marine species B'],[143.0,15,'Marine species C'],[126,12,'Marine species C'],[124.5,18.5,'Marine species A'],[143.0,15,'Marine species A']];
  fileReadVersion++;installData(parseCSV(csvEncode(rows)),fresh?'FRESHWATER_DEMO.csv':'MARINE_DEMO.csv',true);
- Object.assign(state.settings,{basemap:'terrain',ocean:!fresh,bathymetry:!fresh,isobaths:false,freshwater:fresh,countries:true,countryLabels:false,terrain:false});
+ Object.assign(state.settings,{basemap:'terrain',ocean:!fresh,bathymetry:!fresh,isobaths:false,freshwater:fresh,countries:true,countryLabels:false});
  for(const [key,v] of Object.entries(state.settings)){const el=$(key);if(el)el.type==='checkbox'?el.checked=v:el.value=v;}
  setBounds(fresh?[-94,40,-72,50]:[116,5,150,35]);$('region').value='custom';syncLegendControls();updateSites();
 }
