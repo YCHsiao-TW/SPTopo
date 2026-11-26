@@ -1,10 +1,9 @@
 import {eastwardBounds} from './longitude.mjs';
 import {streetBasemap} from './basemap-settings.mjs';
 import {project,unproject,fitCamera} from './core.mjs';
-import {worldMode} from './world.mjs';
 import {geoEqualEarth,geoRobinson,geoPath,geoGraticule,geoCircle,geoDistance} from './vendor/geo.mjs';
 export const PROJECTIONS=['mercator','equalEarth','robinson'];
-export function projected(s,camera,p){return !streetBasemap(s)&&['equalEarth','robinson'].includes(s.projection)&&worldMode(s,camera,p);}
+export function projected(s){return ['equalEarth','robinson'].includes(s.projection);}
 const cache=new Map(),wrap=x=>((x+180)%360+360)%360-180;
 export function projector(s,camera,p){
  const key=[s.projection,camera.x,camera.y,camera.zoom,p.x,p.y,p.w,p.h].join('/');if(cache.has(key))return cache.get(key);
@@ -41,5 +40,5 @@ export function anchorCamera(s,camera,p,coordinate,target,zoom=camera.zoom){
  }
  return best;
 }
-export function projectionSource(s,camera,p){const [lon]=unproject(camera.x,camera.y);return projected(s,camera,p)?`Projection: ${s.projection==='robinson'?'Robinson (compromise)':'Equal Earth (equal area)'}; central meridian ${lon.toFixed(5)} degrees; WGS84 geographic input; reprojected terrain raster. Local scale varies across the map.`:'Projection: Web Mercator (EPSG:3857); WGS84 geographic input.';}
+export function projectionSource(s,camera,p){const [lon]=unproject(camera.x,camera.y);return projected(s,camera,p)?`Projection: ${s.projection==='robinson'?'Robinson (compromise)':'Equal Earth (equal area)'}; central meridian ${lon.toFixed(5)} degrees; WGS84 geographic input; reprojected ${streetBasemap(s)?'OSM street':'terrain'} raster. Local scale varies across the map.`:'Projection: Web Mercator (EPSG:3857); WGS84 geographic input.';}
 export {geoGraticule,geoCircle,geoDistance};

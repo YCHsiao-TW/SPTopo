@@ -12,11 +12,12 @@ globalThis.Path2D=native.Path2D;globalThis.document={createElement(){const c=nat
 const canvas=document.createElement('canvas'),renderer=new MapRenderer(canvas,()=>{});await renderer.init();
 // Legend tests isolate typography/layout from networked DEM and water downloads.
 renderer.terrain.visible=()=>({z:1,tiles:[],placements:[]});renderer.water.load=()=>Promise.resolve();renderer.water.data=()=>null;
-const settings={mapScope:'world',terrain:true,bathymetry:true,rivers:true,lakes:true,legend:true,legendSpecies:true,legendElevation:true,legendDepth:true,legendWater:true,legendFont:13,italic:true,radius:7,autoSize:false,countries:true,frame:true},groups=['Taxon A','Taxon B'],state={settings,language:'en',groups,selected:new Set(groups),colors:{'Taxon A':'#0072b2','Taxon B':'#d55e00'},shapes:{'Taxon A':'star5','Taxon B':'hexagon'},sites:groupSites([{lon:121,lat:23,group:'Taxon A'},{lon:122,lat:24,group:'Taxon B'}]),camera:defaultCamera(settings,[116,15,135,34]),legendEdits:{},displayNames:{},demo:true};
-const all=renderer.render(state,{svg:true}).svg;for(const kind of Object.keys(LEGEND_FLAGS).filter(k=>k!=='biomes'))assert.ok(all.includes(`data-legend="${kind}"`));
-for(const [kind,flag] of Object.entries(LEGEND_FLAGS).filter(([k])=>k!=='biomes')){
+renderer.freshwater.visible=()=>({level:1,features:[]});
+const settings={mapScope:'world',terrain:true,bathymetry:true,freshwater:true,legend:true,legendSpecies:true,legendElevation:true,legendDepth:true,legendWater:true,legendFont:13,italic:true,radius:7,autoSize:false,countries:true,frame:true},groups=['Taxon A','Taxon B'],state={settings,language:'en',groups,selected:new Set(groups),colors:{'Taxon A':'#0072b2','Taxon B':'#d55e00'},shapes:{'Taxon A':'star5','Taxon B':'hexagon'},sites:groupSites([{lon:121,lat:23,group:'Taxon A'},{lon:122,lat:24,group:'Taxon B'}]),camera:defaultCamera(settings,[116,15,135,34]),legendEdits:{},displayNames:{},demo:true};
+const all=renderer.render(state,{svg:true}).svg;for(const kind of Object.keys(LEGEND_FLAGS))assert.ok(all.includes(`data-legend="${kind}"`));
+for(const [kind,flag] of Object.entries(LEGEND_FLAGS)){
  const hidden=renderer.render({...state,settings:{...settings,[flag]:false}},{svg:true}).svg;
- assert.ok(!hidden.includes(`data-legend="${kind}"`));for(const other of Object.keys(LEGEND_FLAGS).filter(k=>k!=='biomes').filter(k=>k!==kind))assert.ok(hidden.includes(`data-legend="${other}"`));assert.ok(hidden.includes('data-marker-shape="star5"'),'Map markers remain when a legend is hidden');
+ assert.ok(!hidden.includes(`data-legend="${kind}"`));for(const other of Object.keys(LEGEND_FLAGS).filter(k=>k!==kind))assert.ok(hidden.includes(`data-legend="${other}"`));assert.ok(hidden.includes('data-marker-shape="star5"'),'Map markers remain when a legend is hidden');
 }
 const noLegend=renderer.render({...state,settings:{...settings,legend:false}},{svg:true}).svg;assert.ok(!noLegend.includes('data-legend='));assert.ok(noLegend.includes('data-marker-shape="star5"'));
 const edited={...state,displayNames:{'Taxon A':'Visible <&>'},legendEdits:{taxa:{x:10,y:8,font:18,titleFont:21,family:'mono',bold:true,italic:false,titleItalic:true,titleBold:false,title:'Custom <&>',background:true,border:true,gap:42},depth:{x:78,y:42,font:18,scaleHeight:220,family:'sans',italic:true},elevation:{font:24,titleFont:28},water:{font:24}}};

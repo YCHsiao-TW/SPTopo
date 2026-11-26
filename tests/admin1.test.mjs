@@ -13,8 +13,9 @@ for(const iso of ['USA','CAN','CHN','JPN','AUS','BRA']){
  assert.ok(data.features.some(f=>f.properties.country===iso),'Boundaries for '+iso);
  assert.ok(data.labels.some(f=>f.country===iso),'Names for '+iso);
 }
-assert.ok(!data.features.some(f=>f.properties.country==='TWN'));
-assert.ok(!data.labels.some(f=>f.country==='TWN'));
+assert.equal(data.features.filter(f=>f.properties.country==='TWN').length,41);
+assert.equal(data.labels.filter(f=>f.country==='TWN').length,21);
+assert.ok(data.labels.some(f=>f.country==='TWN'&&f.name_zh_hant==='臺北市'));
 for(const f of data.features){assert.ok(['LineString','MultiLineString'].includes(f.geometry.type));assert.ok(f.bbox.every(Number.isFinite));assert.ok(f.bbox[0]>=-180&&f.bbox[2]<=180&&f.bbox[1]>=-85&&f.bbox[3]<=85);}
 const japan=visibleAdmin1(data,[129,30,146,46]);assert.ok(japan.length>30&&japan.length<data.features.length/5,'Cull off-screen worldwide boundaries');
 assert.equal(admin1Path({type:'MultiLineString',coordinates:[[[1,2],[3,4]],[[5,6],[7,8]]]},(x,y)=>[x,y]),'M1.00,2.00L3.00,4.00M5.00,6.00L7.00,8.00');
@@ -29,7 +30,7 @@ const require=createRequire(import.meta.url),native=require(process.env.CODEX_PR
 globalThis.Path2D=native.Path2D;globalThis.document={createElement(){const c=native.createCanvas(1,1);c.toBlob=cb=>cb(new Blob([c.toBuffer('image/png')],{type:'image/png'}));return c;}};
 let adminRequests=0;globalThis.fetch=async url=>{if(url.includes('admin1'))adminRequests++;return new Response(await fs.readFile(new URL('../dist/'+url,import.meta.url)));};
 const canvas=document.createElement('canvas'),renderer=new MapRenderer(canvas,()=>{});await renderer.init();
-const settings={mapScope:'world',terrain:false,provinces:true,provinceLabels:true,provinceWidth:.55,countries:false,countryLabels:false,counties:false,towns:false,legend:true,frame:true};
+const settings={terrain:false,provinces:true,provinceLabels:true,provinceWidth:.55,countries:false,countryLabels:false,legend:true,frame:true};
 const state={settings,language:'en',camera:defaultCamera(settings,[-126,24,-66,50]),sites:[],groups:[],colors:{},demo:false};
 renderer.render({...state,settings:{...settings,provinces:false,provinceLabels:false}});assert.equal(adminRequests,0,'Default startup does not load the optional dataset');
 const loading=renderer.status(state);assert.equal(loading.ready,false);assert.equal(loading.adminPending,true);
@@ -46,8 +47,14 @@ for(const [provinces,provinceLabels] of [[false,false],[false,true],[true,false]
  const svg=renderer.render({...state,settings:{...settings,provinces,provinceLabels}},{svg:true}).svg;
  assert.equal(svg.includes('data-layer="admin1-boundaries"'),provinces);assert.equal(svg.includes('data-layer="admin1-labels"'),provinceLabels);
 }
-const taiwan=renderer.render({...state,settings:{...settings,mapScope:'taiwan',counties:true},camera:defaultCamera(settings)},{svg:true}).svg;
-assert.ok(!taiwan.includes('data-layer="admin1-'));assert.ok(taiwan.includes('stroke="#3e5236"'));
+const worldTaiwan=renderer.render({
+ ...state,language:'zh-Hant',
+ camera:defaultCamera(settings,[119.5,21.6,122.25,25.55]),
+},{svg:true}).svg;
+assert.match(worldTaiwan,/data-layer="admin1-boundaries"/);
+assert.match(worldTaiwan,/data-layer="admin1-labels"/);
+assert.match(worldTaiwan,/臺中市|臺南市|嘉義縣|南投縣/);
+assert.doesNotMatch(worldTaiwan,/local-boundaries|stroke="#3e5236"|stroke="#546448"|Taiwan Atlas/);
 renderer.admin1.state='error';assert.equal(renderer.status(state).adminFailed,true);assert.equal(renderer.status(state).ready,false);
 assert.equal(renderer.status({...state,settings:{...settings,provinces:false,provinceLabels:false}}).ready,true,'Disabled optional layer cannot block exports');
-console.log('PASS: global coverage/source versions, Taiwan exclusion, viewport culling, lazy request reuse/retry, layer readiness, independent boundaries/names, US/Japan/China bilingual Canvas/SVG and PNG/PDF exports');
+console.log('PASS: global coverage including Taiwan, viewport culling, lazy loading and retry, and Canvas/SVG/PNG/PDF exports');

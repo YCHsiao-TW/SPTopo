@@ -40,6 +40,6 @@ for(const [language,text] of [['en','Beyond 85°S: outside basemap coverage'],['
  assert.ok((await pngBlob(canvas,'Polar coverage QA')).size>1000);assert.ok(pdfBlob(canvas,'Polar coverage QA').size>1000);
  await fs.writeFile(new URL('polar-'+language+'.png',out),canvas.toBuffer('image/png'));await fs.writeFile(new URL('polar-'+language+'.svg',out),result.svg);
 }
-const local=renderer.render({...base,settings:{...settings,mapScope:'taiwan'},camera:defaultCamera(settings)},{svg:true});
+const local=renderer.render({...base,camera:defaultCamera(settings,[119.5,21.6,122.25,25.55])},{svg:true});
 assert.ok(!local.svg.includes('data-layer="polar-coverage"'));
 console.log('PASS: real Antarctic coastline preserved, artificial 85°/dateline edges omitted, bounded polar bands across page presets, bilingual Canvas/SVG, PNG/PDF and unchanged local maps');

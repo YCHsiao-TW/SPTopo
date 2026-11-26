@@ -27,9 +27,9 @@ for(const [pageWidth,pageHeight] of Object.values(PAGE_PRESETS))for(const positi
  if(!g.side){assert.ok(g.x>=plot.x&&g.x+g.width<=plot.x+plot.w);assert.ok(g.headerY-24>=plot.y);assert.ok(g.headerY-24+g.height<=plot.y+plot.h);}
 }
 const whole={zoom:7.1},local={zoom:11.2};
-assert.deepEqual(terrainPlan({terrainQuality:'auto'},whole),{quality:'auto',zoom:8,limit:120});
-assert.equal(terrainPlan({terrainQuality:'detail'},whole).zoom,9);
-assert.equal(terrainPlan({terrainQuality:'maximum'},whole).zoom,10);
+assert.deepEqual(terrainPlan({terrainQuality:'auto'},whole),{quality:'auto',zoom:7,limit:120});
+assert.equal(terrainPlan({terrainQuality:'detail'},whole).zoom,8);
+assert.equal(terrainPlan({terrainQuality:'maximum'},whole).zoom,9);
 assert.equal(terrainPlan({terrainQuality:'auto'},local).zoom,11);
 assert.equal(terrainPlan({terrainQuality:'maximum'},local).zoom,12);
 console.log('PASS: stable site IDs across filters and batch scenes, complete projects, legend layouts, and adaptive DEM quality profiles');

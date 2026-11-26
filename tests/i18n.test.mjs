@@ -26,11 +26,11 @@ setLanguage('zh-Hant',storage);applyLanguage(doc);assert.equal(nodes[0].nodeValu
 const html=fs.readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
 assert.match(html,/<span id="languageLabel" data-user-content lang="en">🌐 Language<\/span>/,'Language discovery label stays recognizable in every UI language');
 assert.match(html,/<label[^>]*for="languageSelect"/);assert.match(html,/id="languageSelect" aria-labelledby="languageLabel"/);
-const translatableHtml=html.replace(/<ul data-user-content>[\s\S]*?<\/ul>/,'').replace(/<span id="languageLabel"[^>]*>[\s\S]*?<\/span>/,'').replace(/<select[^>]*id="languageSelect"[\s\S]*?<\/select>/,'');
+const translatableHtml=html.replace(/<ul data-user-content>[\s\S]*?<\/ul>/,'').replace(/<p class="author-links" data-user-content>[\s\S]*?<\/p>/,'').replace(/<span id="languageLabel"[^>]*>[\s\S]*?<\/span>/,'').replace(/<select[^>]*id="languageSelect"[\s\S]*?<\/select>/,'');
 const copy=[...translatableHtml.matchAll(/>([^<>]*[\u3400-\u9fff][^<>]*)</g)].map(m=>m[1].trim());
 const attributes=[...html.matchAll(/(?:aria-label|title|placeholder)="([^"]*[\u3400-\u9fff][^"]*)"/g)].map(m=>m[1]);
 for(const value of new Set([...copy,...attributes]))assert.ok(!/[\u3400-\u9fff]/.test(t(value,'en')),'Untranslated UI copy: '+value);
-const technical=/^(?:SPTopo|UTF-8|EN|i|SVG|PNG|PDF|WGS84 · EPSG:3857|Taiwan Atlas 2021\.9\.20|Natural Earth(?: Admin (?:0 Countries 5\.1\.1|1))?|Mapzen \/ AWS Terrain Tiles|[\d., ×（）():%\s-]+(?:cm|px)[（）()\s]*)$/;
+const technical=/^(?:SPTopo|UTF-8|EN|i|SVG|PNG|PDF|WGS84 · EPSG:3857|Natural Earth(?: Admin (?:0 Countries 5\.1\.1|1))?|Mapzen \/ AWS Terrain Tiles|[\d., ×（）():%\s-]+(?:cm|px)[（）()\s]*)$/;
 for(const value of [...translatableHtml.matchAll(/>([^<>]+)</g)].map(m=>m[1].trim()).filter(s=>/[A-Za-z]/.test(s)&&!/[\u3400-\u9fff]/.test(s)&&!technical.test(s)))assert.ok(Object.hasOwn(STATIC_COPY,value)||Object.hasOwn(TEXT,value),'Unregistered English heading: '+value);
 assert.equal(Object.keys(LANGUAGES).length,11);
 const englishKeys=[...new Set([...Object.values(TEXT),...Object.values(MESSAGES).map(p=>p[1])])],placeholders=s=>[...s.matchAll(/\{(\w+)\}/g)].map(m=>m[1]).sort();
@@ -40,7 +40,7 @@ for(const [lang,pack] of Object.entries(LOCALE_TEXT)){
  assert.notEqual(t('匯出地圖',lang),'Export map');assert.notEqual(t('海拔分布',lang),'Elevation distribution');
  assert.equal(t('Taxon alpha',lang),'Taxon alpha');assert.match(tx('color',{group:'Taxon alpha'},lang),/Taxon alpha/);
  setLanguage(lang,storage);assert.equal(readLanguage(storage),lang);applyLanguage(doc);assert.equal(doc.documentElement.dir,lang==='ar'?'rtl':'ltr');
- assert.equal(nodes[4].nodeValue,t('MAP STUDIO',lang));assert.equal(attrs.placeholder,t('留空使用預設標題',lang));assert.equal(meta.content,t('上傳 CSV，製作全球及臺灣的地形與物種分布圖，支援共域圓餅及 PNG、SVG、PDF 匯出。',lang));
+ assert.equal(nodes[4].nodeValue,t('MAP STUDIO',lang));assert.equal(attrs.placeholder,t('留空使用預設標題',lang));assert.equal(meta.content,t('上傳 CSV，製作全球地形與物種分布圖，支援共域圓餅及 PNG、SVG、PDF 匯出。',lang));
  const row=t('第 9 列欄位數與標題不同；含逗號的文字需加雙引號。',lang),terrain=t('海拔 4/5 · DEM z8（依範圍調整） · 1 張載入失敗',lang);
  assert.match(row,/9/);assert.notEqual(row,t('第 9 列欄位數與標題不同；含逗號的文字需加雙引號。','en'));assert.match(terrain,/4\/5/);assert.notEqual(terrain,t('海拔 4/5 · DEM z8（依範圍調整） · 1 張載入失敗','en'));
  assert.match(t('圖檔為 5906 × 23624 px，請降低匯出寬度後再試。',lang),/5906 × 23624/);

@@ -12,7 +12,7 @@ export function createLegendEditor({state,renderer,draw,syncSettings}){
  let nameGroup;
  const count=()=>state.groups.filter(g=>state.selected.has(g)).length;
  const boxes=()=>legendBlocks(state.settings,count(),layout(state.settings),state.legendEdits);
- function boxFor(kind){return boxes().find(b=>b.kind===kind)||legendBlocks({...state.settings,legend:true,[LEGEND_FLAGS[kind]]:true,...(kind==='elevation'?{terrain:true,ecologyTheme:'off'}:kind==='depth'?{bathymetry:true}:kind==='water'?{lakes:true}:kind==='biomes'?{ecologyTheme:'biomes'}:{})},count(),layout(state.settings),state.legendEdits).find(b=>b.kind===kind);}
+ function boxFor(kind){return boxes().find(b=>b.kind===kind)||legendBlocks({...state.settings,legend:true,[LEGEND_FLAGS[kind]]:true,...(kind==='elevation'?{terrain:true}:kind==='depth'?{bathymetry:true}:kind==='water'?{lakes:true}:{})},count(),layout(state.settings),state.legendEdits).find(b=>b.kind===kind);}
  function setEdit(key,value){const next={...state.legendEdits,[target]:{...state.legendEdits[target],[key]:value}};try{state.legendEdits=validateLegendEdits(next);syncSettings();draw();}catch{refresh();}}
  const fields={Title:'title',Family:'family',Font:'font',TitleFont:'titleFont',Italic:'italic',Bold:'bold',TitleItalic:'titleItalic',TitleBold:'titleBold',Color:'color',Columns:'columns',Symbol:'symbol',Gap:'gap',ScaleHeight:'scaleHeight',Background:'background',Border:'border',X:'x',Y:'y'};
  const legacy={font:'legendFont',columns:'legendColumns',symbol:'legendSymbol',italic:'italic'};

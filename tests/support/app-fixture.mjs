@@ -13,7 +13,7 @@ export async function openApp(){
   querySelector(selector){return elements.get(selector.slice(1));}
   select(){this.selected=true;}
   setSelectionRange(start,end){this.selectionStart=start;this.selectionEnd=end;}
-  get options(){return this.children;}
+  get options(){return this.children.flatMap(child=>child.tagName==='OPTGROUP'?child.options:[child]);}
   add(option){this.append(option);}
   append(...nodes){for(const node of nodes){node.parentElement=this;this.children.push(node);}}
   replaceChildren(...nodes){this.children=[];this.append(...nodes);}
@@ -45,7 +45,7 @@ export async function openApp(){
  globalThis.matchMedia=()=>({matches:false});globalThis.localStorage={getItem:()=>null,setItem(){}};
  globalThis.requestAnimationFrame=callback=>{frames.push(callback);return frames.length;};
  const timer=globalThis.setTimeout;globalThis.setTimeout=(fn,ms,...args)=>{const handle=timer(fn,ms,...args);handle.unref();return handle;};
- globalThis.fetch=async url=>{if(url==='./assets/terrain-index.json')return new Response('[]');if(/^\.\/assets\/r-fonts\/(?:Liberation(?:Sans|Serif|Mono)-[A-Za-z]+\.ttf|OFL\.txt)$/.test(url))return new Response(await fs.readFile(new URL('../../dist/'+url,import.meta.url)));if(/^\.\/assets\/(world-countries\.geojson|boundaries\.json|world-admin1\.json|water-rivers\.json|water-lakes\.json|coast-detail\/(?:index|overview|tiles\/\d+(?:_\d+)+)\.json)$/.test(url))return new Response(await fs.readFile(new URL('../../dist/'+url,import.meta.url),'utf8'));throw Error('Unexpected fixture fetch: '+url);};
+ globalThis.fetch=async url=>{if(url==='./assets/terrain-index.json')return new Response('[]');if(/^\.\/assets\/r-fonts\/(?:Liberation(?:Sans|Serif|Mono)-[A-Za-z]+\.ttf|OFL\.txt)$/.test(url))return new Response(await fs.readFile(new URL('../../dist/'+url,import.meta.url)));if(/^\.\/assets\/(world-countries\.geojson|world-admin1\.json|coast-detail\/(?:index|overview|tiles\/\d+(?:_\d+)+)\.json)$/.test(url))return new Response(await fs.readFile(new URL('../../dist/'+url,import.meta.url),'utf8'));throw Error('Unexpected fixture fetch: '+url);};
  URL.createObjectURL=blob=>{const key='blob:fixture/'+blobs.size;blobs.set(key,blob);return key;};URL.revokeObjectURL=url=>blobs.delete(url);
  const rendered=[];
  MapRenderer.prototype.init=async function(){};

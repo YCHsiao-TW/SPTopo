@@ -1,3 +1,4 @@
+import {FreshwaterLayers,FRESHWATER_STYLE,FRESHWATER_SOURCE} from './freshwater.mjs';
 import {countryLabels} from './country-labels.mjs';
 import {placeName} from './place-names.mjs';
 import {LandContours,contourLabels} from './contours.mjs';
@@ -7,21 +8,31 @@ import {effectiveMapSettings,streetBasemap,attributionHeight} from './basemap-se
 import {StreetMap,OSM_SOURCE,OSM_ATTRIBUTION,OSM_COPYRIGHT} from './street-map.mjs';
 import {pathVertices,recipeColor} from './map-recipe.mjs';
 import {markerShape,markerPath} from './markers.mjs';
-import {WaterLayers,needsOcean,visibleWater,DEPTH_BANDS,OCEAN_STOPS,OCEAN_MAX_DEPTH,OCEAN_ELEVATION_RAMP,LAKE_STYLE,WATER_SOURCE} from './water.mjs';
+import {WaterLayers,needsOcean,visibleWater,DEPTH_BANDS,OCEAN_STOPS,OCEAN_MAX_DEPTH,OCEAN_ELEVATION_RAMP,WATER_SOURCE} from './water.mjs';
 import {Admin1Layer,visibleAdmin1,admin1Path,overlaps} from './admin1.mjs';
 import {getLanguage,tx} from './i18n.mjs';
 import {pageSize,outputSize} from './page.mjs';
 import {legendOptions,legendSidebar,legendBlocks,LEGEND_FONTS} from './legend.mjs';
 import {labelFace,labelFont,embeddedLabelFont} from './label-fonts.mjs';
 import {taxonLabelRuns} from './taxon-typography.mjs';
-import {worldMode,elevationScale,outlineGeometry,polarGaps} from './world.mjs';
+import {WORLD_REGIONS,elevationScale,outlineGeometry,polarGaps} from './world.mjs';
 import {projected,projector,fitProjection,projectionSource,geoGraticule,geoCircle,geoDistance} from './projection.mjs';
 import {ProjectedRaster} from './projected-raster.mjs';
-import {EcologyLayers,biomeColor,ECOLOGY_SOURCE} from './ecology.mjs';
 import {RAMP,project,unproject,decodeTerrarium,rampColor,escapeXML} from './core.mjs';
 export const SIZE={width:1200,height:960};
-const SOURCE='Country labels exclude Natural Earth 1:10m breakaway/disputed polygons v5.1.1 (except Lease/Overlay types); source coverage is version-dependent. Taiwan Atlas 2021.9.20 / MOI NLSC; World: Natural Earth Admin 0 Countries 5.1.1 (1:50 million); optional Admin 1 boundary lines 5.1.0 and labels 5.1.1 (1:10 million, Public Domain), accessed 2026-10-20; Terrain Tiles: Mapzen, USGS SRTM & GMTED2010, DOC/NOAA/NESDIS/NCEI. Accessed 2026-10-19. EPSG:3857. Basemap coverage: 85 S to 85 N; hatched polar areas lie outside coverage. Dataset cut edges are not coastlines. Hypsometric tint and hillshade modified in browser. '+WATER_SOURCE;
-export function mapSource(state){if(streetBasemap(state.settings))return OSM_SOURCE+' '+projectionSource(state.settings,state.camera,layout(state.settings));return (state.settings.coastDetail?'Coastline and land mask: © OpenStreetMap contributors, ODbL, https://www.openstreetmap.org/copyright; processed and simplified, see assets/coast-detail/index.json. ':'')+(state.settings.waterDetail?'Detailed inland waters: RiverATLAS v1 (Linke et al. 2019, doi:10.1038/s41597-019-0300-6) and HydroLAKES v1 (Messager et al. 2016, doi:10.1038/ncomms13603), CC BY 4.0; cartographic subset, see assets/hydro-detail/index.json. ':'')+(state.settings.landContours?' Land contours derived from Terrain Tiles DEM; interval '+(state.settings.contourInterval||500)+' m. ':'')+SOURCE.replace(' EPSG:3857.',' ')+projectionSource(state.settings,state.camera,layout(state.settings))+(state.settings.ecologyTheme==='biomes'||state.settings.ecoregions?' '+ECOLOGY_SOURCE:'');}
+const SOURCE='Country labels exclude Natural Earth 1:10m breakaway/disputed polygons v5.1.1 (except Lease/Overlay types); source coverage is version-dependent. World: Natural Earth Admin 0 Countries 5.1.1 (1:50 million); optional Admin 1 boundary lines 5.1.0 and labels 5.1.1 (1:10 million, Public Domain), accessed 2026-10-20; Terrain Tiles: Mapzen, USGS SRTM & GMTED2010, DOC/NOAA/NESDIS/NCEI. Accessed 2026-10-19. EPSG:3857. Basemap coverage: 85 S to 85 N; hatched polar areas lie outside coverage. Dataset cut edges are not coastlines. Hypsometric tint and hillshade modified in browser. '+WATER_SOURCE;
+export function mapSource(state){
+ const s=state.settings,p=layout(s),projection=projectionSource(s,state.camera,p);
+ if(streetBasemap(s))return OSM_SOURCE+' '+projection;
+ const sources=[
+  s.coastDetail?'Coastline and land mask: © OpenStreetMap contributors, ODbL, https://www.openstreetmap.org/copyright; processed and simplified, see assets/coast-detail/index.json.':'',
+  s.freshwater?FRESHWATER_SOURCE:'',
+  s.landContours?'Land contours derived from Terrain Tiles DEM; interval '+(s.contourInterval||500)+' m.':'',
+  SOURCE.replace(' EPSG:3857.',' '),
+  projection,
+ ];
+ return sources.filter(Boolean).join(' ');
+}
 export function layout(settings){settings=effectiveMapSettings(settings);const f=pageSize(settings),side=legendSidebar(settings);return {x:65+(legendOptions(settings).position==='left'?side:0),y:35,w:f.width-105-side,h:f.height-100-attributionHeight(settings)};}
 export function position(lon,lat,camera,p,settings={}){if(projected(settings,camera,p))return projector(settings,camera,p)(lon,lat);const q=project(lon,lat),s=256*2**camera.zoom;return [p.x+p.w/2+(nearUnit(q[0],camera.x)-camera.x)*s,p.y+p.h/2+(q[1]-camera.y)*s];}
 export function inversePosition(x,y,camera,p,settings={}){if(projected(settings,camera,p))return projector(settings,camera,p).invert(x,y)||[NaN,NaN];const s=256*2**camera.zoom;const q=unproject(camera.x+(x-p.x-p.w/2)/s,camera.y+(y-p.y-p.h/2)/s);return [wrapLongitude(q[0]),q[1]];}
@@ -33,12 +44,11 @@ export const TERRAIN_QUALITIES=['fast','auto','detail','maximum'];
 export function terrainPlan(settings,camera){
  if(settings.terrainQuality===undefined&&Number.isInteger(settings.terrainZoom))return {quality:'legacy',zoom:Math.max(7,Math.min(12,settings.terrainZoom)),limit:120};
  const quality=TERRAIN_QUALITIES.includes(settings.terrainQuality)?settings.terrainQuality:'auto';
- const minimum=settings.mapScope==='world'||camera.zoom<6?0:8;
- const base=Math.max(minimum,Math.min(12,Math.floor(camera.zoom+.25)));
+ const base=Math.max(0,Math.min(12,Math.floor(camera.zoom+.25)));
  const profile={fast:{offset:-1,limit:48},auto:{offset:0,limit:120},detail:{offset:1,limit:220},maximum:{offset:2,limit:420}}[quality];
- return {quality,zoom:Math.max(minimum===0?0:7,Math.min(12,base+profile.offset)),limit:profile.limit};
+ return {quality,zoom:Math.max(0,Math.min(12,base+profile.offset)),limit:profile.limit};
 }
-export function oceanPlan(settings,camera){const p=terrainPlan({...settings,terrainQuality:settings.terrainQuality||'auto',mapScope:'world'},camera);return {...p,zoom:Math.max(1,Math.min(8,p.zoom))};}
+export function oceanPlan(settings,camera){const p=terrainPlan({...settings,terrainQuality:settings.terrainQuality||'auto'},camera);return {...p,zoom:Math.max(1,Math.min(8,p.zoom))};}
 // Bound the land mask before Canvas clipping. Far-away world vertices can
 // overflow a rasterizer's clip representation at local map/export scales.
 function clipRing(points,box){
@@ -75,12 +85,6 @@ export function interiorBoundaries(features){
  const segments=new Map(),key=p=>p.map(n=>n.toFixed(5)).join(',');
  for(const f of features){const polygons=f.geometry.type==='Polygon'?[f.geometry.coordinates]:f.geometry.coordinates;for(const polygon of polygons)for(const ring of polygon)for(let i=1;i<ring.length;i++){const a=ring[i-1],b=ring[i],ka=key(a),kb=key(b),id=ka<kb?ka+'|'+kb:kb+'|'+ka;const prior=segments.get(id);if(prior)prior.count++;else segments.set(id,{count:1,line:[a,b]});}}
  return {type:'MultiLineString',coordinates:[...segments.values()].filter(s=>s.count>1).map(s=>s.line)};
-}
-function labelPoint(g){const polygons=g.type==='Polygon'?[g.coordinates]:g.coordinates;let best=null,areaMax=-1;for(const poly of polygons){const ring=poly[0];let area=0,cx=0,cy=0;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const a=ring[j],b=ring[i],z=a[0]*b[1]-b[0]*a[1];area+=z;cx+=(a[0]+b[0])*z;cy+=(a[1]+b[1])*z;}if(Math.abs(area)>areaMax&&area!==0){areaMax=Math.abs(area);best=[cx/(3*area),cy/(3*area)];}}return best||polygons[0][0][0];}
-function legendLines(ctx,text,width,size,font){
- const tokens=/[\u3040-\u30ff\u3400-\u9fff]/.test(text)?Array.from(text):text.split(/(\s+)/);let lines=[];
- for(let attempt=0;attempt<24;attempt++){ctx.font=`${size}px ${font}`;lines=[];let current='';for(const token of tokens){if(ctx.measureText(current+token).width>width&&current.trim()){lines.push(current.trim());current='';}current+=token;}if(current.trim())lines.push(current.trim());if(lines.length<=2||size<=6)break;size*=.92;}
- return {lines,size};
 }
 class Painter{
  constructor(ctx,svg=false){this.ctx=ctx;this.parts=svg?[]:null;this.faces=svg?new Set():null;this.commands=null;this.recordMeta={};}
@@ -134,9 +138,8 @@ class Painter{
 function drawMapAttribution(paint,figure,s){
  const height=attributionHeight(s);if(!height)return;
  paint.recordMeta={layer:'attribution',clip:false};paint.rect(0,figure.height-height,figure.width,height,'#ffffff');
- let y=figure.height-height+19;
- if(streetBasemap(s)||s.coastDetail){paint.parts?.push(`<a href="${OSM_COPYRIGHT}">`);paint.text(OSM_ATTRIBUTION,figure.width-16,y,{size:12,color:'#374439',align:'right'});paint.parts?.push('</a>');y+=22;}
- if(!streetBasemap(s)&&s.waterDetail&&(s.rivers||s.lakes)){paint.text('RiverATLAS (Linke et al., 2019) / HydroLAKES (Messager et al., 2016) · CC BY 4.0',figure.width-16,y,{size:11,color:'#374439',align:'right'});}
+ const y=figure.height-height+19;
+ if(streetBasemap(s)||s.coastDetail||s.freshwater){paint.parts?.push(`<a href="${OSM_COPYRIGHT}">`);paint.text(OSM_ATTRIBUTION,figure.width-16,y,{size:12,color:'#374439',align:'right'});paint.parts?.push('</a>');}
 }
 export class Terrain{
  constructor(onChange){this.tiles=new Map();this.queue=[];this.running=0;this.onChange=onChange;this.local=new Set();this.ready=fetch('./assets/terrain-index.json').then(r=>r.json()).then(x=>this.local=new Set(x));}
@@ -173,51 +176,56 @@ export class Terrain{
  }
 }
 export class MapRenderer{
- constructor(canvas,onUpdate){this.canvas=canvas;this.landContours=new LandContours();this.coastDetail=new DetailLayers('coast-detail',onUpdate);this.hydroDetail=new DetailLayers('hydro-detail',onUpdate);this.street=new StreetMap(onUpdate);this.terrain=new Terrain(onUpdate);this.projectedRaster=new ProjectedRaster(this.terrain);this.admin1=new Admin1Layer(onUpdate);this.water=new WaterLayers(onUpdate);this.ecology=new EcologyLayers(onUpdate);this.geometry=null;this.hitMarkers=[];}
- async init(){const responses=await Promise.all([fetch('./assets/boundaries.json'),fetch('./assets/world-countries.geojson')]);if(responses.some(r=>!r.ok))throw Error('行政界線無法載入。');this.geometry=await responses[0].json();this.world=await responses[1].json();this.interior={countries:interiorBoundaries(this.world.features),counties:interiorBoundaries(this.geometry.counties.features),towns:interiorBoundaries(this.geometry.towns.features)};for(const k of ['counties','towns'])for(const f of this.geometry[k].features)f.labelPoint=labelPoint(f.geometry);}
+ constructor(canvas,onUpdate){this.canvas=canvas;this.landContours=new LandContours();this.coastDetail=new DetailLayers('coast-detail',onUpdate);this.freshwater=new FreshwaterLayers(onUpdate);this.street=new StreetMap(onUpdate);this.terrain=new Terrain(onUpdate);this.projectedRaster=new ProjectedRaster(this.terrain);this.admin1=new Admin1Layer(onUpdate);this.water=new WaterLayers(onUpdate);this.world=null;this.hitMarkers=[];}
+ async init(){
+  const response=await fetch('./assets/world-countries.geojson');
+  if(!response.ok)throw Error('行政界線無法載入。');
+  const world=await response.json();
+  this.interior={countries:interiorBoundaries(world.features)};
+  this.world=world;
+ }
  status(state){
-  const s=effectiveMapSettings(state.settings),p=layout(s);if(streetBasemap(s)){this.coastDetail.status(false);this.hydroDetail.status(false);const v=this.street.view(state.camera,p,{request:!state.interacting});return {...v,street:true,streetFailed:!!v.failed,streetPending:!v.ready&&!v.failed,message:v.failed?'OpenStreetMap 街道底圖載入失敗，請重新載入或切回地形底圖。':tx('osmStatus',{loaded:v.loaded,total:v.tiles.length,zoom:v.z},state.language||getLanguage())};}this.street.pause();let terrain={ready:true,message:s.ecologyTheme==='biomes'?'生物群系底色啟用中；海拔配色設定會保留。':'彩色海拔已關閉 · 行政區底圖',tiles:[],failed:0};
+  const s=effectiveMapSettings(state.settings),p=layout(s);if(streetBasemap(s)){this.coastDetail.status(false);this.freshwater.layerStatus(false);const grid=projected(s)?this.projectedRaster.grid(state,p):null,v=this.street.view(state.camera,p,{request:!state.interacting,grid});return {...v,street:true,streetFailed:!!v.failed,streetPending:!v.ready&&!v.failed,message:v.failed?'OpenStreetMap 街道底圖載入失敗，請重新載入或切回地形底圖。':tx('osmStatus',{loaded:v.loaded,total:v.tiles.length,zoom:v.z},state.language||getLanguage())};}this.street.pause();let terrain={ready:true,message:'彩色海拔已關閉 · 行政區底圖',tiles:[],failed:0};
   if(s.terrain||s.landContours){const plan=terrainPlan(s,state.camera),v=this.visibleTiles({...state,settings:s},p,plan),loaded=v.tiles.filter(t=>t.status==='ready').length,failed=v.tiles.filter(t=>t.status==='error').length;terrain={...v,ready:loaded===v.tiles.length,failed,message:`海拔 ${loaded}/${v.tiles.length} · DEM z${v.z}${v.z!==plan.zoom?'（依範圍調整）':''}${failed?` · ${failed} 張載入失敗`:''}`};}
   const curved=projected(s,state.camera,p),bounds=curved?null:mercatorBounds(state.camera,p);
-  const details=[this.coastDetail.status(s.coastDetail,state.camera,bounds,curved),this.hydroDetail.status(s.waterDetail&&(s.rivers||s.lakes),state.camera,bounds,curved)];
+  const details=[this.coastDetail.status(s.coastDetail,state.camera,bounds,curved),this.freshwater.layerStatus(s.freshwater,s,state.camera,p,!state.interacting)];
   terrain={...terrain,ready:terrain.ready&&details.every(d=>d.ready),failed:terrain.failed+details.filter(d=>d.failed).length,detailFailed:details.some(d=>d.failed),detailPending:details.some(d=>d.pending)};
   const water=this.water.status(s);let depthReady=true,depthFailed=0;
   if(s.bathymetry){const plan=oceanPlan(s,state.camera),v=this.visibleTiles({...state,settings:s},p,plan);depthReady=v.tiles.every(t=>t.status==='ready');depthFailed=v.tiles.filter(t=>t.status==='error').length;}
   const waterFailed=water.failed||depthFailed>0,waterPending=water.pending||!depthReady&&!depthFailed;
   terrain={...terrain,ready:terrain.ready&&water.ready&&depthReady,failed:terrain.failed+Number(water.failed)+depthFailed,waterFailed,waterPending,waterMessage:water.count||s.bathymetry?tx(waterFailed?'waterFailed':waterPending?'waterLoading':'waterReady',{},state.language||getLanguage()):''};
-  const eco=this.ecology.status(s);terrain={...terrain,ready:terrain.ready&&eco.ready,failed:terrain.failed+Number(eco.failed),ecologyFailed:eco.failed,ecologyPending:!eco.ready&&!eco.failed,ecologyMessage:eco.active?tx(eco.failed?'ecologyFailed':eco.ready?'ecologyReady':'ecologyLoading',{},state.language||getLanguage()):''};
-  if(!worldMode(s,state.camera,p)||!s.provinces&&!s.provinceLabels)return terrain;
+  if(!s.provinces&&!s.provinceLabels)return terrain;
   this.admin1.load();const adminReady=this.admin1.state==='ready',adminFailed=this.admin1.state==='error';
   return {...terrain,ready:terrain.ready&&adminReady,failed:terrain.failed+Number(adminFailed),adminFailed,adminPending:!adminReady&&!adminFailed,adminMessage:tx(adminReady?'admin1Ready':adminFailed?'admin1Failed':'admin1Loading',{},state.language||getLanguage())};
  }
  render(state,{canvas=this.canvas,width=1200,svg=false,rBundle=false}={}){
   state={...state,settings:effectiveMapSettings(state.settings)};
-  const figure=pageSize(state.settings),output=outputSize(state.settings,width);canvas.width=output.width;canvas.height=output.height;const ctx=canvas.getContext('2d'),scale=width/figure.width;ctx.scale(scale,scale);ctx.fillStyle='#fff';ctx.fillRect(0,0,figure.width,figure.height);if(!this.geometry)return {canvas};
-  const s=state.settings,p=layout(s),camera=state.camera,curved=projected(s,camera,p),point=curved?projector(s,camera,p):mercatorPoint(camera,p),domain=curved?p:mercatorDomain(camera,p),globalMap=worldMode(s,camera,p);const coastData=s.coastDetail?this.coastDetail.data(camera,point.bounds,curved):null;const landFeatures=coastData?coastData.features.filter(f=>f.properties.kind==='land'):globalMap?(this.world?.land?.features||[]):this.geometry.nation.features;const land=coastData?coastData.features.filter(f=>f.properties.kind==='coast').map(f=>admin1Path(f.geometry,point)).join(''):landFeatures.map(f=>globalMap?outlineGeometry(f.geometry,point):pathGeometry(f.geometry,point)).join('');
-  if((canvas!==this.canvas||svg||rBundle)&&(s.coastDetail&&!coastData||s.waterDetail&&(s.rivers||s.lakes)&&!this.hydroDetail.data(camera,point.bounds,curved)))throw Error('詳細地理圖層尚未載入完成。');
+  const figure=pageSize(state.settings),output=outputSize(state.settings,width);canvas.width=output.width;canvas.height=output.height;const ctx=canvas.getContext('2d'),scale=width/figure.width;ctx.scale(scale,scale);ctx.fillStyle='#fff';ctx.fillRect(0,0,figure.width,figure.height);if(!this.world)return {canvas};
+  const s=state.settings,p=layout(s),camera=state.camera,curved=projected(s),streets=streetBasemap(s),
+   point=curved?projector(s,camera,p):mercatorPoint(camera,p),domain=curved?p:mercatorDomain(camera,p);
+  const coastData=s.coastDetail?this.coastDetail.data(camera,point.bounds,curved):null;
+  const landFeatures=coastData?coastData.features.filter(f=>f.properties.kind==='land'):this.world.land.features;
+  const land=streets?'':coastData
+   ?coastData.features.filter(f=>f.properties.kind==='coast').map(f=>admin1Path(f.geometry,point)).join('')
+   :landFeatures.map(f=>outlineGeometry(f.geometry,point)).join('');
+  if((canvas!==this.canvas||svg||rBundle)&&(s.coastDetail&&!coastData||s.freshwater&&!this.freshwater.visible(s,camera,p)))throw Error('詳細地理圖層尚未載入完成。');
   if(curved&&canvas!==this.canvas)for(const plan of [...(s.terrain?[terrainPlan(s,camera)]:[]),...(s.bathymetry?[oceanPlan(s,camera)]:[])])if(this.visibleTiles(state,p,plan,scale).tiles.some(t=>t.status!=='ready'))throw Error('目前範圍的海拔仍在載入，完成後即可匯出。');
   if(s.landContours&&(canvas!==this.canvas||svg||rBundle)&&this.visibleTiles(state,p,terrainPlan(s,camera)).tiles.some(t=>t.status!=='ready'))throw Error('目前範圍的海拔仍在載入，完成後即可匯出。');
-  const landPath=streetBasemap(s)?'':landFeatures.map(f=>pathGeometry(f.geometry,point,{x:p.x-1,y:p.y-1,w:p.w+2,h:p.h+2})).join('');
+  const landPath=streets?'':landFeatures.map(f=>pathGeometry(f.geometry,point,{x:p.x-1,y:p.y-1,w:p.w+2,h:p.h+2})).join('');
   const landMask=new Path2D(landPath);
-  if(streetBasemap(s))this.street.draw(ctx,camera,p,{request:canvas===this.canvas&&!svg&&!rBundle&&!state.interacting,exporting:canvas!==this.canvas||svg||rBundle,scale});else{
-  this.street.pause();ctx.save();ctx.beginPath();ctx.rect(domain.x,domain.y,domain.w,domain.h);ctx.clip();if(needsOcean(s)){ctx.fillStyle=DEPTH_BANDS[0][1];ctx.fillRect(domain.x,domain.y,domain.w,domain.h);}ctx.clip(landMask,'evenodd');ctx.fillStyle=s.ecologyTheme==='biomes'?'#e2e2e0':'#e9f7e4';ctx.fillRect(p.x,p.y,p.w,p.h);
+  if(streets)this.street.draw(ctx,camera,p,{request:canvas===this.canvas&&!svg&&!rBundle&&!state.interacting,exporting:canvas!==this.canvas||svg||rBundle,scale,grid:curved?this.projectedRaster.grid(state,p):null});else{
+  this.street.pause();ctx.save();ctx.beginPath();ctx.rect(domain.x,domain.y,domain.w,domain.h);ctx.clip();if(s.ocean||s.bathymetry){ctx.fillStyle=DEPTH_BANDS[0][1];ctx.fillRect(domain.x,domain.y,domain.w,domain.h);}ctx.clip(landMask,'evenodd');ctx.fillStyle='#e9f7e4';ctx.fillRect(p.x,p.y,p.w,p.h);
   if(s.terrain){
-   this.drawTiles(ctx,state,p,scale,elevationScale(s,camera,p).ramp,terrainPlan(s,camera));
+   this.drawTiles(ctx,state,p,scale,elevationScale().ramp,terrainPlan(s,camera));
   }
   ctx.restore();}const paint=new Painter(ctx,svg);
   if(svg)paint.parts.push(`<image width="${figure.width}" height="${figure.height}" href="${canvas.toDataURL('image/png')}"/>`);
   ctx.save();ctx.beginPath();ctx.rect(domain.x,domain.y,domain.w,domain.h);ctx.clip();paint.parts?.push(`<g clip-path="url(#plot)">`);
-  if(coastData){
-   ctx.save();ctx.clip(landMask,'evenodd');
-   paint.parts?.push(`<defs><clipPath id="detail-land"><path d="${landPath}" clip-rule="evenodd"/></clipPath></defs><g clip-path="url(#detail-land)">`);
-   this.drawEcology(paint,state,p,point);
-   paint.parts?.push('</g>');ctx.restore();
-  }else this.drawEcology(paint,state,p,point);
   this.drawOcean(paint,state,p,point,scale,landFeatures);
   const contourOccupied=s.landContours?this.drawLandContours(paint,state,p,point,landFeatures):[];
-  if(!streetBasemap(s)&&(globalMap||needsOcean(s)))this.polarCoverage(paint,state,p,point);
+  if(!streetBasemap(s))this.polarCoverage(paint,state,p,point);
   if(s.grid)this.graticule(paint,state,p,true);
-  if(globalMap&&(s.provinces||s.provinceLabels)){
+  if(s.provinces||s.provinceLabels){
    this.admin1.load();
    if(s.provinces&&this.admin1.data){
     paint.parts?.push('<g data-layer="admin1-boundaries">');
@@ -225,29 +233,18 @@ export class MapRenderer{
     paint.parts?.push('</g>');
    }
   }
-  if(globalMap&&s.countries!==false)paint.path(admin1Path(this.interior.countries,point),{stroke:'#64745c',width:.55,opacity:.8});
-  if(coastData&&(s.towns||s.counties)){
-   // Administrative geometry may extend beyond the detailed shoreline.
-   ctx.save();ctx.clip(landMask,'evenodd');
-   paint.parts?.push('<g data-layer="local-boundaries" clip-path="url(#detail-land)">');
-   if(s.towns)paint.path(admin1Path(this.interior.towns,point),{stroke:'#546448',width:.4,opacity:.62});
-   if(s.counties)paint.path(admin1Path(this.interior.counties,point),{stroke:'#3e5236',width:.8,opacity:.72});
-   paint.parts?.push('</g>');ctx.restore();
-  }else if(!coastData){
-   if(s.towns)for(const f of this.geometry.towns.features)paint.path(pathGeometry(f.geometry,point),{stroke:'#546448',width:.4,opacity:.62});
-   if(s.counties)for(const f of this.geometry.counties.features)paint.path(pathGeometry(f.geometry,point),{stroke:'#3e5236',width:.8,opacity:.72});
-  }
+  if(s.countries!==false)paint.path(admin1Path(this.interior.countries,point),{stroke:'#64745c',width:.55,opacity:.8});
   this.drawFreshwater(paint,state,point,p);
   if(!streetBasemap(s))paint.path(land,{stroke:'#657c54',width:.7});
   const occupied=[...contourOccupied],language=state.language||getLanguage();
-  if(globalMap&&s.countryLabels){
+  if(s.countryLabels){
    const blockers=[...occupied,...state.sites.map(site=>{const [x,y]=point(site.lon,site.lat);return {x,y,w:2*(s.radius||7)+8,h:2*(s.radius||7)+8};})];
    const items=(this.world?.features||[]).map(feature=>({feature,d:pathGeometry(feature.geometry,point,p),anchor:feature.properties.label?point(...feature.properties.label):null}));
    paint.parts?.push('<g data-layer="country-labels">');
    for(const label of countryLabels(paint.ctx,items,p,language,blockers,(this.world?.disputedAreas?.features||[]).map(f=>pathGeometry(f.geometry,point,p)))){occupied.push(label);paint.text(label.text,label.x,label.y+label.size*.35,{size:label.size,color:'#58615b',align:'center'});}
    paint.parts?.push('</g>');
   }
-  if(globalMap&&s.provinceLabels&&this.admin1.data&&camera.zoom>=3.5){
+  if(s.provinceLabels&&this.admin1.data&&camera.zoom>=3.5){
    paint.parts?.push('<g data-layer="admin1-labels">');let labels=0;
    for(const f of this.admin1.data.labels){
     if(!overlaps(f.bbox,point.bounds))continue;
@@ -260,12 +257,11 @@ export class MapRenderer{
    }
    paint.parts?.push('</g>');
   }
-  for(const [key,on,property,size] of [['counties',s.countyLabels,'COUNTYNAME',12],['towns',s.townLabels,'TOWNNAME',9]])if(on)for(const f of this.geometry[key].features){const [x,y]=point(...f.labelPoint),text=(!['zh-Hant','zh-Hans'].includes(language)?f.properties[key==='counties'?'COUNTYENG':'TOWNENG']:null)||f.properties[property];if(x<p.x+15||x>p.x+p.w-15||y<p.y+15||y>p.y+p.h-15)continue;const w=text.length*size;if(occupied.some(a=>Math.abs(x-a.x)<(w+a.w)/2&&Math.abs(y-a.y)<14))continue;occupied.push({x,y,w});paint.text(text,x,y,{size,color:'#44593b',align:'center'});}
   let basemap=null;
   if(rBundle){if(attributionHeight(s)){const copy=document.createElement('canvas');copy.width=canvas.width;copy.height=canvas.height;const c=copy.getContext('2d');c.drawImage(canvas,0,0);c.scale(scale,scale);drawMapAttribution(new Painter(c),figure,s);basemap=copy.toDataURL('image/png');}else basemap=canvas.toDataURL('image/png');}
 
   this.hitMarkers=[];
-  for(const site of state.sites){const [x,y]=point(site.lon,site.lat);let r=s.radius+(s.autoSize?Math.max(0,site.values.length-1)*2:0);if(x<p.x-r||x>p.x+p.w+r||y<p.y-r||y>p.y+p.h+r)continue;const shape=site.values.length===1?markerShape(state.shapes,site.values[0].group):'circle';if(streetBasemap(s)||needsOcean(s)||s.rivers||s.lakes)paint.marker(x,y,r+1.5,shape,'#ffffffd9','none',0);if(site.values.length===1)paint.marker(x,y,r,shape,state.colors[site.values[0].group]);else {const total=site.values.reduce((a,b)=>a+b.value,0);let a=-Math.PI/2;for(const v of site.values){const b=a+v.value/total*Math.PI*2;paint.wedge(x,y,r,a,b,state.colors[v.group]);a=b;}paint.circle(x,y,r,'#ffffff00');}this.hitMarkers.push({x,y,r,site});
+  for(const site of state.sites){const [x,y]=point(site.lon,site.lat);let r=s.radius+(s.autoSize?Math.max(0,site.values.length-1)*2:0);if(x<p.x-r||x>p.x+p.w+r||y<p.y-r||y>p.y+p.h+r)continue;const shape=site.values.length===1?markerShape(state.shapes,site.values[0].group):'circle';if(streetBasemap(s)||needsOcean(s)||s.freshwater)paint.marker(x,y,r+1.5,shape,'#ffffffd9','none',0);if(site.values.length===1)paint.marker(x,y,r,shape,state.colors[site.values[0].group]);else {const total=site.values.reduce((a,b)=>a+b.value,0);let a=-Math.PI/2;for(const v of site.values){const b=a+v.value/total*Math.PI*2;paint.wedge(x,y,r,a,b,state.colors[v.group]);a=b;}paint.circle(x,y,r,'#ffffff00');}this.hitMarkers.push({x,y,r,site});
    if(s.siteNumbers&&site.id){const font=s.siteLabelSize??11;ctx.font=`600 ${font}px Arial`;const w=ctx.measureText(site.id).width+8,lx=Math.max(p.x+4,Math.min(p.x+p.w-w-4,x+r+5)),ly=Math.max(p.y+font+5,Math.min(p.y+p.h-5,y-r-3));paint.rect(lx-3,ly-font-2,w,font+6,'#fffffff0');paint.text(site.id,lx+1,ly,{size:font,weight:'600',color:'#25352d'});}
   }
   if(rBundle){paint.commands=[];paint.recordMeta={layer:'adornments',clip:true};}
@@ -313,14 +309,6 @@ export class MapRenderer{
     ctx.drawImage(this.terrain.color(t,s,ramp),x-pad,y-pad,size+2*pad,size+2*pad);ctx.restore();
    }
  }
- drawEcology(paint,state,p,point){
-  const s=state.settings;if(s.ecologyTheme==='biomes'){
-   this.ecology.load('biomes');paint.parts?.push('<g data-layer="biomes">');
-   for(const f of this.ecology.data('biomes')?.features||[])paint.path(pathGeometry(f.geometry,point,p),{fill:biomeColor(f)});
-   paint.parts?.push('</g>');
-  }
-  if(s.ecoregions){this.ecology.load('ecoregions');paint.parts?.push('<g data-layer="ecoregions">');for(const f of this.ecology.data('ecoregions')?.features||[])if(!f.properties.auxiliary)paint.path(outlineGeometry(f.geometry,point),{stroke:'#554d48',width:.45,opacity:.6});paint.parts?.push('</g>');}
- }
  northArrow(paint,state,p,point){
   const x=p.x+p.w-31,y=p.y+45;let angle=0;
   if(point.invert){const q=point.invert(x,y+15)||unproject(state.camera.x,state.camera.y);if(Math.abs(q[1])>84.8)return;const a=point(...q),b=point(q[0],q[1]+.05);angle=Math.atan2(b[1]-a[1],b[0]-a[0])+Math.PI/2;}
@@ -340,7 +328,7 @@ export class MapRenderer{
   if(!ocean)return;
   const ctx=paint.ctx;ctx.save();ctx.clip(new Path2D(ocean),'evenodd');
   paint.parts?.push(`<defs><clipPath id="ocean-mask"><path d="${ocean}" clip-rule="evenodd"/></clipPath></defs><g data-layer="ocean" clip-path="url(#ocean-mask)">`);
-  paint.path(ocean,{fill:DEPTH_BANDS[0][1]});
+  if(s.ocean||s.bathymetry)paint.path(ocean,{fill:DEPTH_BANDS[0][1]});
   if(s.bathymetry){
    paint.parts?.push('<g data-layer="bathymetry">');
    const layer=document.createElement('canvas'),px=Math.floor(p.x*scale),py=Math.floor(p.y*scale);
@@ -361,10 +349,22 @@ export class MapRenderer{
   paint.parts?.push('</g>');ctx.restore();
  }
  drawFreshwater(paint,state,point,p){
-  const s=state.settings,detail=s.waterDetail?this.hydroDetail.data(state.camera,point.bounds,!!point.path):null;
-  const dataset=kind=>detail?{features:detail.features.filter(f=>f.properties.kind===kind)}:this.water.data(kind);
-  if(s.rivers){if(!s.waterDetail)this.water.load('rivers');paint.parts?.push('<g data-layer="rivers">');for(const f of visibleWater(dataset('rivers'),point.bounds)){if(state.camera.zoom<3&&f.properties.rank>4)continue;paint.path(admin1Path(f.geometry,point),{stroke:'#3987ac',width:f.properties.rank<=3?1:.65,opacity:.9});}paint.parts?.push('</g>');}
-  if(s.lakes){if(!s.waterDetail)this.water.load('lakes');paint.parts?.push('<g data-layer="lakes">');for(const f of visibleWater(dataset('lakes'),point.bounds))paint.path(pathGeometry(f.geometry,point,{x:p.x-1,y:p.y-1,w:p.w+2,h:p.h+2}),{...LAKE_STYLE,width:.5});paint.parts?.push('</g>');}
+  const s=state.settings;
+  if(!s.freshwater)return;
+  const layer=this.freshwater.visible(s,state.camera,p);
+  if(!layer)return;
+  paint.parts?.push('<g data-layer="freshwater" data-lod="'+layer.level+'">');
+  const box={x:p.x-1,y:p.y-1,w:p.w+2,h:p.h+2};
+  for(const [style,ink] of Object.entries(FRESHWATER_STYLE)){
+   const features=layer.features.filter(f=>f.properties.style===style);
+   if(ink.fill){
+    for(const f of features)paint.path(pathGeometry(f.geometry,point,box),ink);
+   }else{
+    const path=features.map(f=>admin1Path(f.geometry,point)).join('');
+    if(path)paint.path(path,ink);
+   }
+  }
+  paint.parts?.push('</g>');
  }
  polarCoverage(paint,state,p,point){
   if(point?.path){for(const lat of [-90,90]){const d=point.path(geoCircle().center([0,lat]).radius(5).precision(2)());if(!d)continue;const id=lat<0?'south-coverage':'north-coverage';paint.ctx.save();paint.ctx.clip(new Path2D(d));paint.parts?.push(`<defs><clipPath id="${id}"><path d="${d}"/></clipPath></defs><g data-layer="polar-coverage" clip-path="url(#${id})">`);paint.path(d,{fill:'#f1f3ee'});for(let offset=-p.h;offset<p.w;offset+=18)paint.line(p.x+offset,p.y,p.x+offset+p.h,p.y+p.h,'#cbd2c4',.65,.8);paint.parts?.push('</g>');paint.ctx.restore();}return;}
@@ -399,7 +399,7 @@ export class MapRenderer{
   for(const box of this.legendBoxes){
    paint.recordMeta={layer:'legend-'+box.kind,clip:false};
    const {kind,x,y,w,h,style,barHeight}=box,font=kind==='taxa'?box.font:style.font,family=LEGEND_FONTS[style.family],body={size:font,font:family,italic:style.italic,weight:style.bold?'600':'normal',color:style.color};
-   const titles={taxa:tx(s.legendTitle==='groups'?'legendGroups':'legendSpecies',{},language),elevation:tx('elevation',{},language),depth:tx('waterDepth',{},language),water:tx('waterLegend',{},language),biomes:tx('biomeLegend',{},language)};
+   const titles={taxa:tx(s.legendTitle==='groups'?'legendGroups':'legendSpecies',{},language),elevation:tx('elevation',{},language),depth:tx('waterDepth',{},language),water:tx('waterLegend',{},language)};
    paint.parts?.push(`<g data-legend="${kind}">`);
    if(style.background||style.border)paint.rect(x,y,w,h,style.background?'#fffffff0':'none',style.border?'#a2af9b':'none',.7);
    const title=style.title||titles[kind],titleWeight=style.titleBold?'600':'normal';
@@ -414,7 +414,7 @@ export class MapRenderer{
      paint.legendName(taxonLabelRuns(state,group),cx+offset,cy,maxW,body);
     });
    }else if(kind==='elevation'){
-    const top=y+box.barTop,altitude=elevationScale(s,state.camera,layout(s));for(let j=0;j<barHeight;j++){const e=altitude.max*(1-j/Math.max(1,barHeight-1)),c=rampColor(e,altitude.ramp);paint.rect(x+10,top+j,14,1.1,`rgb(${c.join(',')})`);}
+    const top=y+box.barTop,altitude=elevationScale();for(let j=0;j<barHeight;j++){const e=altitude.max*(1-j/Math.max(1,barHeight-1)),c=rampColor(e,altitude.ramp);paint.rect(x+10,top+j,14,1.1,`rgb(${c.join(',')})`);}
     let last=-Infinity;for(const e of [...altitude.ticks].sort((a,b)=>b-a)){const cy=top+barHeight*(1-e/altitude.max);if(cy-last<font*1.25||e>0&&top+barHeight-cy<font*1.25)continue;paint.text(String(e),x+34,cy+4,body);last=cy;}
    }else if(kind==='depth'){
     const top=y+box.barTop,cx=x+10;paint.parts?.push('<g data-layer="depth-legend">');
@@ -424,17 +424,16 @@ export class MapRenderer{
      let last=-Infinity;for(const depth of [0,200,...Array.from({length:10},(_,i)=>(i+1)*1000),11000]){const cy=top+barHeight*depth/OCEAN_MAX_DEPTH;if(cy-last<font*1.25||depth<11000&&top+barHeight-cy<font*1.25)continue;paint.text(String(depth),cx+18,cy+4,body);last=cy;}
     }else{let last=-Infinity;for(const [depth] of DEPTH_BANDS.slice(1)){const cy=top+barHeight*depth/OCEAN_MAX_DEPTH;if(cy-last<font*1.25)continue;paint.line(cx,cy,cx+12,cy,'#427899',.7);paint.text(String(depth),cx+18,cy+3,body);last=cy;}}
     paint.parts?.push('</g>');
-   }else if(kind==='biomes'){
-    const features=this.ecology.data('biomes')?.features||[];for(let i=1;i<=15;i++){
-     const f=features.find(f=>Number(f.properties.biome??f.properties.id)===i),cy=y+box.barTop+(i-1)*box.biomeRow,label=tx(i===15?'biomeUnclassified':'biome'+i,{},language),wrapped=legendLines(paint.ctx,label,w-42,Math.min(font,box.biomeRow/2.5),family);
-     paint.rect(x+10,cy+2,10,10,biomeColor(f));wrapped.lines.forEach((line,j)=>paint.text(line,x+27,cy+10+j*(wrapped.size+1),{...body,size:wrapped.size}));
-    }
    }else{
-    const cy=y+Math.max(43,style.titleFont+style.font+12);if(s.rivers){paint.line(x+10,cy-4,x+24,cy-4,'#3987ac',1.1);paint.text(tx('waterRivers',{},language),x+31,cy,body);}if(s.lakes){const cx=x+10+(s.rivers?box.waterColumn:0);paint.rect(cx,cy-11,13,9,LAKE_STYLE.fill,LAKE_STYLE.stroke,.5);paint.text(tx('waterLakes',{},language),cx+20,cy,body);}
+    const cy=y+Math.max(43,style.titleFont+style.font+12),cx=x+10+box.waterColumn;
+    paint.line(x+10,cy-4,x+24,cy-4,FRESHWATER_STYLE.main.stroke,1.1);
+    paint.text(tx('waterRivers',{},language),x+31,cy,body);
+    paint.rect(cx,cy-11,13,9,FRESHWATER_STYLE.area.fill);
+    paint.text(tx('waterLakes',{},language),cx+20,cy,body);
    }
    paint.parts?.push('</g>');
   }
  }
 }
-export function defaultCamera(settings,bounds=[119.5,21.6,122.25,25.55],centerLongitude){return fitProjection(settings,bounds,layout(settings),centerLongitude);}
+export function defaultCamera(settings,bounds=WORLD_REGIONS.world,centerLongitude){return fitProjection(settings,bounds,layout(settings),centerLongitude);}
 export {SOURCE,Painter};

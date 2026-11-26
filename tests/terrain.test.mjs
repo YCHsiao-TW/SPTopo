@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 import {Terrain,MapRenderer,layout} from '../dist/map.mjs';
-import {unproject} from '../dist/core.mjs';
+import {unproject,WORLD_RAMP} from '../dist/core.mjs';
 
 const require=createRequire(import.meta.url);
 const native=require(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES?path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES,'@napi-rs/canvas'):'@napi-rs/canvas');
@@ -39,7 +39,7 @@ assert.notDeepEqual(loaded,pending,'A newly loaded neighbor invalidates the cach
 close(loaded,corePixel(terrain.color(center,settings),127,128),0,'Loaded neighbor restores the continuous slope');
 
 for(const hillshade of [true,false]){
- const style={...settings,hillshade},a=terrain.color(center,style),b=terrain.color(east,style),c=terrain.color(south,style);
+ const style={...settings,hillshade,countries:false},a=terrain.color(center,style),b=terrain.color(east,style),c=terrain.color(south,style);
  assert.equal(a.width,258);assert.equal(a.height,258);
  for(let y=0;y<256;y++){
   close(pixel(a,257,y+1),pixel(b,1,y+1),0,'East gutter matches the next tile');
@@ -58,12 +58,12 @@ renderer.terrain=terrain;
 const tiles=[[-1,-1],[0,-1],[-1,0],[0,0]].map(([dx,dy])=>terrain.tiles.get(`${z}/${cx+dx}/${cy+dy}`));
 terrain.visible=()=>({z,tiles,placements:tiles.map(({key,x,y})=>({key,x,y}))});
 const n=2**z,ring=[[cx-1,cy-1],[cx+1,cy-1],[cx+1,cy+1],[cx-1,cy+1],[cx-1,cy-1]].map(([x,y])=>unproject(x/n,y/n));
-renderer.geometry={nation:{features:[{geometry:{type:'Polygon',coordinates:[ring]}}]},counties:{features:[]},towns:{features:[]}};
+renderer.world={land:{features:[{geometry:{type:'Polygon',coordinates:[ring]}}]}};
 const zoom=z+2.37,world=256*2**zoom,camera={x:cx/n+.37/world,y:cy/n-.21/world,zoom};
 for(const hillshade of [true,false]){
- const style={...settings,hillshade},scene={settings:style,camera,groups:[],colors:{},sites:[],demo:false},p=layout(style),size=world/n;
+ const style={...settings,hillshade,countries:false},scene={settings:style,camera,groups:[],colors:{},sites:[],demo:false},p=layout(style),size=world/n;
  const mosaic=native.createCanvas(512,512),mc=mosaic.getContext('2d');
- for(const tile of tiles){const tex=terrain.color(tile,style);mc.putImageData(tex.getContext('2d').getImageData(1,1,256,256),(tile.x-cx+1)*256,(tile.y-cy+1)*256);}
+ for(const tile of tiles){const tex=terrain.color(tile,style,WORLD_RAMP);mc.putImageData(tex.getContext('2d').getImageData(1,1,256,256),(tile.x-cx+1)*256,(tile.y-cy+1)*256);}
  for(const width of [1200,3000]){
   const rendered=renderer.render(scene,{width,svg:true});assert.ok(rendered.svg.includes('data:image/png;base64'));
   const expected=native.createCanvas(canvas.width,canvas.height),ctx=expected.getContext('2d'),scale=width/1200;ctx.scale(scale,scale);

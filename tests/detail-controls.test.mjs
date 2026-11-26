@@ -8,15 +8,14 @@ const initial=await savedConfig();
 assert.equal(initial.settings.coastDetail,true);
 assert.equal(rendered.at(-1).settings.coastDetail,true);
 assert.equal(get('coastDetail'),undefined);
-assert.equal(initial.settings.waterDetail,false);
-assert.equal(get('geographicDetails').hidden,false);
+assert.equal(initial.settings.freshwater,false);
+for(const id of ['geographicDetails','waterDetail','rivers','lakes'])assert.equal(get(id),undefined);
 assert.equal(get('osmAttribution').hidden,false);
 
-get('waterDetail').checked=true;
-await get('waterDetail').emit('change');
+get('freshwater').checked=true;
+await get('freshwater').emit('change');
 const cfg=await savedConfig();
-assert.ok(cfg.settings.coastDetail&&cfg.settings.waterDetail);
-assert.equal(get('legacyWaterSourceHint').hidden,true);
+assert.ok(cfg.settings.coastDetail&&cfg.settings.freshwater);
 
 await get('saveProject').emit('click');
 const project=await downloads.at(-1).blob.text();
@@ -30,26 +29,39 @@ assert.deepEqual(await savedConfig(),cfg);
 
 get('basemap').value='osm';
 await get('basemap').emit('change');
-assert.equal(get('waterDetail').disabled,true);
+assert.equal(get('freshwater').disabled,true);
 assert.equal(effectiveMapSettings((await savedConfig()).settings).coastDetail,false);
 get('basemap').value='terrain';
 await get('basemap').emit('change');
-assert.equal(get('waterDetail').disabled,false);
+assert.equal(get('freshwater').disabled,false);
 assert.equal(effectiveMapSettings((await savedConfig()).settings).coastDetail,true);
 
 const bad=structuredClone(cfg);
-bad.settings.waterDetail='true';
+bad.settings.freshwater='true';
 await loadConfig(bad);
 assert.deepEqual(await savedConfig(),cfg,'Invalid settings are atomic');
 
 for(const value of [false,undefined]){
  const legacy=structuredClone(initial);
  legacy.settings.coastDetail=value;
- delete legacy.settings.waterDetail;
+ delete legacy.settings.freshwater;
  await loadConfig(legacy);
  assert.deepEqual(await savedConfig(),initial);
 }
 
+for(const legacyFlags of [{rivers:true,lakes:false},{rivers:false,lakes:true,waterDetail:true}]){
+ const legacy=structuredClone(initial);
+ delete legacy.settings.freshwater;
+ Object.assign(legacy.settings,legacyFlags);
+ await loadConfig(legacy);
+ const saved=(await savedConfig()).settings;
+ assert.equal(saved.freshwater,true);
+ assert.ok(['rivers','lakes','waterDetail'].every(key=>!(key in saved)));
+}
+const current=structuredClone(initial);
+current.settings.rivers=true;
+await loadConfig(current);
+assert.equal((await savedConfig()).settings.freshwater,false);
 const status=MapRenderer.prototype.status;
 try{
  for(const flag of ['detailPending','detailFailed']){

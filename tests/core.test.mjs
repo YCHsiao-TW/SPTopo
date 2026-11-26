@@ -17,9 +17,8 @@ assert.deepEqual(detectColumns(['經度','緯度','scientificName']),{lon:'經�
 assert.equal(parseCSV('lon\tlat\tgroup\n120\t23\tX').rows[0][2],'X');assert.equal(parseCSV(csvEncode([['a','b'],['"one"','two\nlines']])).rows[0][0],'"one"');
 for(const [lon,lat] of [[121,23.5],[118.3,24.4],[-160,-30],[0,0]]){const q=unproject(...project(lon,lat));assert.ok(Math.abs(q[0]-lon)<1e-9&&Math.abs(q[1]-lat)<1e-9);}
 assert.equal(decodeTerrarium(137,219,68),2523.265625);for(let i=0;i<30;i++)assert.match(colorFor(i),/^#[0-9a-f]{6}$/i);
-const boundaries=JSON.parse(await fs.readFile(path.join(root,'dist/assets/boundaries.json'),'utf8'));assert.equal(boundaries.towns.features.length,368);assert.equal(boundaries.counties.features.length,22);for(const name of ['金門縣','連江縣','澎湖縣'])assert.ok(boundaries.counties.features.find(f=>f.properties.COUNTYNAME===name));
 const html=await fs.readFile(path.join(root,'dist/index.html'),'utf8'),app=await fs.readFile(path.join(root,'dist/app.mjs'),'utf8'),ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(x=>x[1]);assert.equal(new Set(ids).size,ids.length);for(const m of app.matchAll(/\$\('([^']+)'\)/g))assert.ok(ids.includes(m[1]),`Missing element ${m[1]}`);
-console.log('PASS: CSV quoting/BOM/TSV, numeric exclusions, presence/count, rounding, projection, color stability, DEM decoding, islands, UI bindings');
+console.log('PASS: CSV quoting/BOM/TSV, numeric exclusions, presence/count, rounding, projection, color stability, DEM decoding and UI bindings');
 
 assert.equal(pagePreset({}),'5:4');assert.throws(()=>pageSize({pageWidth:0,pageHeight:20}));assert.throws(()=>pageSize({pageWidth:60,pageHeight:5}));assert.throws(()=>outputSize({pageWidth:5,pageHeight:20},5906));
 for(const [ratio,[pageWidth,pageHeight]] of Object.entries(PAGE_PRESETS)){

@@ -1,4 +1,4 @@
-"""Prepare bundled Natural Earth admin-1 lines and labels (pyshp, shapely)."""
+"""Prepare Natural Earth Admin 1 lines and labels with pyshp, shapely and OpenCC."""
 import argparse
 import hashlib
 import json
@@ -8,6 +8,7 @@ import urllib.request
 import zipfile
 
 import shapefile
+from opencc import OpenCC
 from shapely.geometry import shape, mapping, box, Point
 from shapely import make_valid
 
@@ -47,8 +48,6 @@ for record in reader.iterShapeRecords():
     if record.shape.shapeType == 0:
         continue
     properties = record.record.as_dict()
-    if properties['ADM0_A3'] == 'TWN':
-        continue  # Taiwan retains its existing county/town layers.
     geometry = shape(record.shape.__geo_interface__).intersection(extent)
     if geometry.is_empty:
         continue
@@ -58,13 +57,12 @@ for record in reader.iterShapeRecords():
     features.append({'type': 'Feature', 'properties': {'country': properties['ADM0_A3']}, 'bbox': clean(geometry.bounds), 'geometry': clean(mapping(geometry))})
 
 labels = []
+traditional = OpenCC('s2twp')
 reader = shapefile.Reader(str(args.data_dir / 'ne_10m_admin_1_states_provinces.shp'), encoding='utf-8')
 for record in reader.iterShapeRecords():
     if record.shape.shapeType == 0:
         continue
     properties = record.record.as_dict()
-    if properties['adm0_a3'] == 'TWN':
-        continue
     geometry = shape(record.shape.__geo_interface__)
     if not geometry.is_valid:
         geometry = make_valid(geometry)
@@ -75,7 +73,8 @@ for record in reader.iterShapeRecords():
     label = Point(lon, lat) if isinstance(lon, (float, int)) and isinstance(lat, (float, int)) and math.isfinite(lon) and math.isfinite(lat) else None
     if label is None or not geometry.covers(label):
         label = geometry.representative_point()
-    labels.append({'country': properties['adm0_a3'], 'code': properties['adm1_code'], 'name': properties['name'], 'name_en': properties['name_en'] or properties['name'], 'name_zh': properties['name_zht'] or properties['name_zh'] or properties['name'], 'label': clean([label.x, label.y]), 'bbox': clean(geometry.bounds)})
+    name_zh = properties['name_zht'] or properties['name_zh'] or properties['name']
+    labels.append({'country': properties['adm0_a3'], 'code': properties['adm1_code'], 'name': properties['name'], 'name_en': properties['name_en'] or properties['name'], 'name_zh': name_zh, 'label': clean([label.x, label.y]), 'bbox': clean(geometry.bounds), 'name_zh_hant': traditional.convert(name_zh)})
 labels.sort(key=lambda f: (f['bbox'][2] - f['bbox'][0]) * (f['bbox'][3] - f['bbox'][1]), reverse=True)
 data = {'type': 'FeatureCollection', 'features': features, 'labels': labels, 'source': {'provider': 'Natural Earth', 'scale': '1:10 million', 'boundary_version': '5.1.0', 'label_version': '5.1.1', 'accessed': '2026-10-20', 'simplify_degrees': .015, 'archive_sha256': {k: v[1] for k, v in sources.items()}}}
 output = root / 'world-admin1.json'

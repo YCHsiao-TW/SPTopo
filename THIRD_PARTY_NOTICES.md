@@ -1,9 +1,5 @@
 # Geographic data sources
 
-## Taiwan administrative boundaries
-
-Taiwan Atlas 2021.9.20 (`towns-10t.json`), https://github.com/dkaoster/taiwan-atlas . MIT notice retained in `dist/assets/taiwan-atlas-LICENSE.txt`. Original source: Ministry of the Interior, National Land Surveying and Mapping Center, https://data.gov.tw/dataset/7441 , under Open Government Data License v1. Historical coverage includes 22 counties/cities and 368 townships/districts. These detailed geometries are retained for the Taiwan mode and Taiwan land in the world mode.
-
 ## Global land and country/region boundaries
 
 Natural Earth Admin 0 Countries, **50m v5.1.1**, retrieved 2026-10-20:
@@ -13,7 +9,7 @@ Natural Earth Admin 0 Countries, **50m v5.1.1**, retrieved 2026-10-20:
 - Archive SHA-256: `5fed433373581fa648920435f937d95f2d3c0200e067409c6478dcdf1b853139`
 - License: Public Domain, https://www.naturalearthdata.com/about/terms-of-use/
 
-Made with Natural Earth. The delivered GeoJSON contains 242 country/territory features from this snapshot, not a count of internationally recognized states. WGS84 geometries were clipped to [-180, -85, 180, 85] and simplified with a topology-preserving 0.015-degree tolerance. Country codes, source English/Chinese names and label anchors were retained. A dissolved land mask was generated; its Taiwan geometry uses the existing Taiwan Atlas nation geometry. Country boundary display is separate from coastline display. Dataset names and boundaries follow the source snapshot. “50m” denotes a **1:50 million map scale**, not 50-metre ground resolution; this basemap is generalized and has limited small-island/detail coverage.
+Made with Natural Earth. The delivered GeoJSON contains 242 country/territory features from this snapshot, not a count of internationally recognized states. WGS84 geometries were clipped to [-180, -85, 180, 85] and simplified with a topology-preserving 0.015-degree tolerance. Country codes, source English/Chinese names and label anchors were retained. The generalized world land mask uses dissolved Natural Earth country geometry. Country boundary display is separate from coastline display. Dataset names and boundaries follow the source snapshot. “50m” denotes a **1:50 million map scale**, not 50-metre ground resolution; this basemap is generalized and has limited small-island/detail coverage.
 
 ## Global province/state/prefecture boundaries and names
 
@@ -26,7 +22,7 @@ Natural Earth Admin 1, original **1:10 million** scale, retrieved 2026-10-20:
 - Polygon archive SHA-256: `efc59726337323058f9446210adc96673179cd344e053666ee3d28cb58ba2b05`
 - License: Public Domain, https://www.naturalearthdata.com/about/terms-of-use/
 
-The bundled derivative contains 10,137 internal line features and 4,575 administrative labels across 250 source country/territory codes. These are source dataset categories, not counts of internationally recognized states. Null shapes and Taiwan admin-1 records are omitted; Taiwan retains the existing detailed county/town snapshot. Lines are clipped to longitude ±180°, latitude ±85°, simplified at 0.015 degrees and rounded to five decimal places. English, Traditional Chinese (falling back to source Chinese/original names), source codes, label anchors and bounds are retained. Anchors outside their source polygons are replaced with an interior representative point. The UI avoids label overlaps and omits names when zoomed out or space is insufficient. Source names, boundary definitions and historical administrative arrangements follow Natural Earth and are not automatically updated. Admin-1 linework at this scale may differ slightly from the more generalized 1:50 million country/land base.
+The bundled derivative contains 10,178 internal line features and 4,596 administrative labels across 251 source country/territory codes. These are source dataset categories, not counts of internationally recognized states. Null shapes are omitted. Coverage varies by region and follows the Natural Earth release. Lines are clipped to longitude ±180°, latitude ±85°, simplified at 0.015 degrees and rounded to five decimal places. English, Traditional Chinese (falling back to source Chinese/original names), source codes, label anchors and bounds are retained. Anchors outside their source polygons are replaced with an interior representative point. The UI avoids label overlaps and omits names when zoomed out or space is insufficient. Source names, boundary definitions and historical administrative arrangements follow Natural Earth and are not automatically updated. Admin-1 linework at this scale may differ slightly from the more generalized 1:50 million country/land base.
 
 ## Terrain
 
@@ -46,7 +42,7 @@ The application requests only current-view tiles and honors normal browser cachi
 
 ## Map projection and example records
 
-Maps offer Web Mercator (EPSG:3857), Equal Earth (equal area) and Robinson (compromise); inputs use WGS84 longitude/latitude. The interface accepts extents within longitude −180° to 180° and latitude −85° to 85°. Equal Earth/Robinson support rotated antimeridian clipping and Pacific centering at 150°E. Taiwan mode retains Web Mercator. The source basemap is clipped at latitude ±85°; its synthetic closing edges at this cutoff and the dateline are excluded from coastline/country strokes. Hatched polar bands mark areas beyond source coverage in previews and exports, without fabricating coastline or elevation for the missing polar cap. Scale bars show horizontal distance near the map center; scale/distortion varies with position and projection.
+Maps offer Web Mercator (EPSG:3857), Equal Earth (equal area) and Robinson (compromise); inputs use WGS84 longitude/latitude. The interface accepts extents within longitude −180° to 180° and latitude −85° to 85°. Equal Earth/Robinson support rotated antimeridian clipping and Pacific centering at 150°E. The source basemap is clipped at latitude ±85°; its synthetic closing edges at this cutoff and the dateline are excluded from coastline/country strokes. Hatched polar bands mark areas beyond source coverage in previews and exports, without fabricating coastline or elevation for the missing polar cap. Scale bars show horizontal distance near the map center; scale/distortion varies with position and projection.
 
 Application demonstration CSVs contain synthetic records, including the global city-coordinate example. They are not evidence of biological occurrence or abundance.
 
@@ -54,19 +50,11 @@ Application demonstration CSVs contain synthetic records, including the global c
 ## Water layers
 Continuous ocean bathymetry: Mapzen/AWS Terrain Tiles negative elevations, primarily ETOPO1 in ocean areas (DOC/NOAA/NESDIS/NCEI), decoded and colored in-browser. The continuous palette spans 0–11000 m; data/display interpolation does not increase source accuracy. Source documentation: https://github.com/tilezen/joerd/blob/master/docs/data-sources.md .
 
-Ocean mask and optional contours: Natural Earth bathymetry 4.1.0 (derived from SRTM Plus), rivers and lakes 5.0.0, Public Domain, original scale 1:10,000,000. Downloaded 2026-10-21 from the official Natural Earth S3 distribution. Generalized in `scripts/prepare-water.py` and clipped to ±85°; archive hashes are in `dist/assets/water-SOURCES.txt`. Vector contours are generalized source contours; raster depth colors interpolate actual decoded elevations. Lake depths are not included.
+Ocean mask and optional contours: Natural Earth bathymetry 4.1.0 (derived from SRTM Plus), Public Domain, original scale 1:10,000,000. Downloaded 2026-10-21 from the official Natural Earth S3 distribution. Generalized in `scripts/prepare-water.py` and clipped to ±85°; archive hashes are in `dist/assets/water-SOURCES.txt`. Vector contours are generalized source contours; raster depth colors interpolate actual decoded elevations. Lake depths are not included.
 
 - https://www.naturalearthdata.com/downloads/10m-physical-vectors/10m-bathymetry/
-- https://www.naturalearthdata.com/downloads/10m-physical-vectors/10m-rivers-lake-centerlines/
-- https://www.naturalearthdata.com/downloads/10m-physical-vectors/10m-lakes/
 - https://www.naturalearthdata.com/about/terms-of-use/
 
-
-## Terrestrial biomes and ecoregions
-
-RESOLVE Ecoregions 2017, Dinerstein et al. (2017), *An Ecoregion-Based Approach to Protecting Half the Terrestrial Realm*, BioScience 67(6):534–545, https://doi.org/10.1093/biosci/bix014 . CC BY 4.0, https://creativecommons.org/licenses/by/4.0/ . Official archive: https://storage.googleapis.com/teow2016/Ecoregions2017.zip . Dataset overview: https://ecoregions.appspot.com/ .
-
-The derivative repairs invalid polygons, generalizes detail, removes documented tiny disconnected components while protecting every ecological ID, and dissolves 846 terrestrial ecoregions into 14 biomes. Rock/Ice is retained as an auxiliary record, not a fifteenth biome. Source colors are muted for display and legends. No endorsement is implied. Full source hashes, processing parameters, retained holes and limitations are in `dist/assets/ecoregions-SOURCES.txt`.
 
 ## Projection software
 
@@ -77,10 +65,22 @@ D3 Geo 3.1.1, D3 Geo Projection 4.0.0, D3 Array 3.2.4 and InternMap 2.0.3 are in
 
 © OpenStreetMap contributors, Open Database License (ODbL 1.0), https://www.openstreetmap.org/copyright . Source: https://osmdata.openstreetmap.de/data/land-polygons.html , complete unsplit WGS84 coastline-derived land polygons retrieved 2026-11-02. The application derives true coastlines before regional clipping, simplifies geometry, omits documented small islands, repairs invalid geometries and clips to latitude ±85°. The prepared derivative is distributed under ODbL; retain attribution. Full source hash and processing details, together with the upstream README, are in `dist/assets/coast-detail/SOURCES.txt` and `index.json`. No upstream endorsement is implied.
 
-## Optional prepared inland-water detail
+## Freshwater
 
-RiverATLAS v1, part of HydroATLAS: Linke et al. (2019), *Global hydro-environmental sub-basin and river reach characteristics at high spatial resolution*, Scientific Data 6:283, https://doi.org/10.1038/s41597-019-0300-6 . Official product: https://www.hydrosheds.org/hydroatlas . CC BY 4.0, https://creativecommons.org/licenses/by/4.0/ .
+© OpenStreetMap contributors. The Overture Maps `2026-11-18.0` base/water release supplies the OSM-derived river, stream, lake and reservoir data. The tile build joins compatible centerlines, ranks connected channels, filters and simplifies geometry, and removes centerline parts coincident with visible water areas. The same rules apply worldwide. The atlas covers 85°S to 85°N. OSM survey completeness and geometry vary by region.
 
-HydroLAKES v1: Messager et al. (2016), *Estimating the volume and age of water stored in global lakes using a geo-statistical approach*, Nature Communications 7:13603, https://doi.org/10.1038/ncomms13603 . Official product: https://www.hydrosheds.org/products/hydrolakes . CC BY 4.0.
+The freshwater database and editable R vectors are distributed under the ODbL 1.0. The website software has a separate licence. Retain the OSM attribution when publishing maps and follow the ODbL terms when redistributing the geographic database.
 
-Both datasets are modified for browser cartography by filtering, simplifying and assigning features to regional chunks, retaining source IDs where documented, and removing small lake islands at display thresholds. This derivative does not distribute the separately licensed HydroRIVERS standalone data; river geometry is read from the CC-BY RiverATLAS source. Full source hashes, thresholds, transformations and citations are in `dist/assets/hydro-detail/SOURCES.txt` and `index.json`. These are mapped river/lake geometries and cartographic attributes, not measurements of current lake depth or water level. No upstream endorsement is implied.
+- https://www.openstreetmap.org/copyright
+- https://opendatacommons.org/licenses/odbl/1-0/
+- https://docs.overturemaps.org/schema/reference/base/water/
+
+Build from the pinned water partition with Python, DuckDB 2.0.1 and its `spatial` and `httpfs` extensions, Shapely 2.2, NumPy and PyArrow. The scripts record source-object ETags and output receipts. Reuse the same output paths to resume a build.
+
+```sh
+python scripts/extract-osm-freshwater.py water-staging
+python scripts/prepare-osm-freshwater.py water-staging freshwater-prepared
+python scripts/package-freshwater-tiles.py freshwater-prepared freshwater-output
+```
+
+Copy the public index, overview, tiles, statistics, source metadata, ODbL licence and `distribution.json` into `dist/assets/freshwater`. The hidden `.strips` directory holds resumable build receipts. The overview and continental files use gzip-compressed TopoJSON. Other tiers encode the same topology with gzip-compressed variable-length integers. The regional tier retains its coordinates. The finer two tiers use a 0.0002° and 0.0001° grid respectively, retaining original coordinates where snapping would invalidate a polygon or collapse an arc. The two finest tiers omit transient feature identifiers and reach counts while retaining names and styles. The level-of-detail thresholds are 3, 5.7, 9.25 and 11.8 in logical map zoom. Minimum lake and reservoir areas are 220, 18, 0.75, 0.085 and 0.012 km². For the continental tier, global rivers and a locally selected regional channel are retained. Finer tiers use adjusted spatial density limits. Original OSM mapping gaps remain visible.

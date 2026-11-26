@@ -8,14 +8,16 @@ import {MapRenderer,defaultCamera,position,layout,mapSource} from '../dist/map.m
 import {projected} from '../dist/projection.mjs';
 import {legendBlocks,moveLegend} from '../dist/legend.mjs';
 import {parseCSV,detectColumns,normalizeRows,groupSites} from '../dist/core.mjs';
-import {createMapPackage} from '../dist/codegen.mjs';
+import {createEditableMapPackage} from '../dist/codegen-editable.mjs';
 import {pngBlob,pdfBlob,zipBlob} from '../dist/export.mjs';
 const box={x:65,y:35,w:875,h:860};
 for(const zoom of [1,3.8,12.5,17])for(const x of [0,.2,.5,1]){
- const plan=streetTilePlan({x,y:.5,zoom},box);assert.ok(plan.keys.length>0&&plan.keys.length<=48);
+ const plan=streetTilePlan({x,y:.5,zoom},box);if(zoom===1)assert.equal(plan.z,3,'Global overview requests labeled OSM tiles');assert.ok(plan.keys.length>0&&plan.keys.length<=64);
  for(const key of plan.keys){const [z,x,y]=key.split('/').map(Number);assert.ok(x>=0&&x<2**z&&y>=0&&y<2**z);}
 }
-assert.ok(streetTilePlan({x:.5,y:.5,zoom:4},{...box,w:9000,h:9000}).keys.length<=48);
+const widePlan=streetTilePlan({x:.5,y:.5,zoom:4},{...box,w:9000,h:9000});
+assert.equal(widePlan.z,3);
+assert.equal(widePlan.keys.length,64);
 // Fake image loader: exercise concurrency, stale queue removal, HTTP-error retry,
 // CORS failures and caching without issuing any external requests.
 let tainted=false,requests=[],changes=0;
@@ -38,25 +40,29 @@ globalThis.Path2D=native.Path2D;globalThis.document={createElement:()=>{const c=
 globalThis.fetch=async url=>new Response(await fs.readFile(new URL('../dist/'+url,import.meta.url)));
 const renderer=new MapRenderer(document.createElement('canvas'),()=>{});await renderer.init();
 renderer.street.imageFactory=()=>{throw Error('Unexpected network request in export test');};
-const settings={basemap:'osm',projection:'robinson',mapScope:'world',terrain:true,ecologyTheme:'biomes',ecoregions:true,ocean:true,bathymetry:true,isobaths:true,lakes:true,rivers:true,countries:true,provinces:true,counties:true,towns:true,legend:true,legendTitle:'species',legendFont:13,radius:9,autoSize:true,frame:true,grid:true,northArrow:true,scaleBar:true,pies:true,digits:5,pieMode:'count',siteNumbers:false,pageWidth:25,pageHeight:20};
+const settings={basemap:'osm',projection:'robinson',mapScope:'world',terrain:true,ocean:true,bathymetry:true,isobaths:true,freshwater:true,countries:true,provinces:true,counties:true,towns:true,legend:true,legendTitle:'species',legendFont:13,radius:9,autoSize:true,frame:true,grid:true,northArrow:true,scaleBar:true,pies:true,digits:5,pieMode:'count',siteNumbers:false,pageWidth:25,pageHeight:20};
 const raw=parseCSV('lat,lon,species\n24.1,120.7,Taxon A\n24.1,120.7,Taxon B\n24.1,120.7,Taxon B\n24.2,120.8,Taxon A'),columns=detectColumns(raw.headers),{valid}=normalizeRows(raw,columns);
 const state={settings,camera:defaultCamera(settings,[120.4,23.9,121,24.4]),referenceBounds:[120.4,23.9,121,24.4],language:'en',raw,columns,valid,groups:['Taxon A','Taxon B'],selected:new Set(['Taxon A','Taxon B']),sites:groupSites(valid,5,'count',true),colors:{'Taxon A':'#d55e00','Taxon B':'#0072b2'},shapes:{'Taxon A':'star5'},legendEdits:{taxa:{x:80,y:99}},displayNames:{},demo:true};
-const eff=effectiveMapSettings(settings);assert.equal(eff.projection,'mercator');assert.equal(eff.terrain,false);assert.equal(eff.bathymetry,false);assert.equal(settings.projection,'robinson');assert.equal(settings.terrain,true);assert.equal(projected(settings,state.camera,layout(settings)),false);
-const populate=(scene=state)=>{for(const key of streetTilePlan(scene.camera,layout(scene.settings)).keys){const image=native.createCanvas(256,256),c=image.getContext('2d');c.fillStyle='#e8e6db';c.fillRect(0,0,256,256);c.strokeStyle='#ffffff';c.lineWidth=10;c.beginPath();c.moveTo(0,128);c.lineTo(256,128);c.moveTo(128,0);c.lineTo(128,256);c.stroke();c.fillStyle='#59734b';c.font='14px sans-serif';c.fillText('Synthetic street tile '+key,8,26);renderer.street.tiles.set(key,{key,status:'ready',image});}};populate();
-assert.ok(renderer.status(state).ready);assert.equal(renderer.water.layers.size,0);assert.equal(renderer.ecology.layers.size,0);
+const eff=effectiveMapSettings(settings);assert.equal(eff.projection,'robinson');assert.equal(eff.terrain,false);assert.equal(eff.bathymetry,false);assert.equal(settings.projection,'robinson');assert.equal(settings.terrain,true);assert.equal(projected(settings),true);
+const planFor=scene=>{const p=layout(scene.settings);return streetTilePlan(scene.camera,p,projected(scene.settings)?renderer.projectedRaster.grid(scene,p):null);};
+const populate=(scene=state)=>{for(const key of planFor(scene).keys){const image=native.createCanvas(256,256),c=image.getContext('2d');c.fillStyle='#e8e6db';c.fillRect(0,0,256,256);c.strokeStyle='#ffffff';c.lineWidth=10;c.beginPath();c.moveTo(0,128);c.lineTo(256,128);c.moveTo(128,0);c.lineTo(128,256);c.stroke();c.fillStyle='#59734b';c.font='14px sans-serif';c.fillText('Synthetic street tile '+key,8,26);renderer.street.tiles.set(key,{key,status:'ready',image});}};populate();
+assert.ok(renderer.status(state).ready);assert.equal(renderer.water.layers.size,0);
 const blocks=legendBlocks(settings,2,layout(settings),state.legendEdits);assert.deepEqual(blocks.map(b=>b.kind),['taxa']);assert.ok(blocks[0].y+blocks[0].h<=960-28);
 const moved=moveLegend(blocks[0],0,-20,settings),movedBox=legendBlocks(settings,2,layout(settings),{taxa:{...state.legendEdits.taxa,...moved}})[0];assert.ok(Math.abs(movedBox.y-blocks[0].y+20)<1e-8,'Legend drag percentages use the full page, with the attribution footer reserved');
 const output=document.createElement('canvas'),result=renderer.render(state,{canvas:output,width:1500,svg:true});assert.match(result.svg,/OpenStreetMap contributors/);assert.ok(result.svg.includes('href="'+OSM_COPYRIGHT+'"'));assert.ok(!result.svg.includes('stroke="#657c54"'),'No coarse coastline is drawn over OSM');assert.ok(!result.svg.includes('data-legend="elevation"'));assert.equal(renderer.hitMarkers.length,2);
-const [x,y]=position(120.8,24.2,state.camera,layout(settings),settings),pixel=output.getContext('2d').getImageData(Math.round(x*1.25),Math.round(y*1.25),1,1).data;assert.ok(pixel[0]>180&&pixel[1]<130&&pixel[2]<50,'Marker uses the same Mercator position as the street map');
+const [x,y]=position(120.8,24.2,state.camera,layout(settings),settings),pixel=output.getContext('2d').getImageData(Math.round(x*1.25),Math.round(y*1.25),1,1).data;assert.ok(pixel[0]>180&&pixel[1]<130&&pixel[2]<50,'Marker uses the same Robinson position as the street map');
 const qa=new URL('../qa/',import.meta.url);await fs.writeFile(new URL('osm-synthetic-map.png',qa),output.toBuffer('image/png'));await fs.writeFile(new URL('osm-synthetic-map.svg',qa),result.svg);
 assert.ok((await pngBlob(output,mapSource(state))).size>1000);assert.ok(pdfBlob(output,mapSource(state)).size>1000);
+const sample=position(120.5,24.3,state.camera,layout(settings),settings);
+const raster=[...output.getContext('2d').getImageData(Math.round(sample[0]*1.25),Math.round(sample[1]*1.25),1,1).data];
+assert.notDeepEqual(raster,[255,255,255,255],'Robinson renders OSM pixels at their geographic positions');
 const count=renderer.street.tiles.size;renderer.render(state,{canvas:document.createElement('canvas'),width:3000,svg:true});assert.equal(renderer.street.tiles.size,count,'High-resolution export uses exactly the viewed zoom/tiles');
-const pack=createMapPackage(state,renderer,{width:1500});assert.equal(pack.scene.pointHalo,true);assert.ok(pack.scene.commands.some(d=>d.layer==='attribution'&&d.text?.includes('OpenStreetMap contributors')));assert.match(pack.scene.source,/Open Database License/);assert.ok(!pack.files.some(f=>/^tiles\//.test(f.name)));assert.ok((await zipBlob(pack.files)).size>10000);
+const pack=await createEditableMapPackage(state,renderer,{width:1500});assert.equal(pack.scene.settings.projection,'robinson');assert.match(pack.scene.source,/Robinson.*reprojected OSM street raster/);assert.equal(pack.scene.pointHalo,true);assert.ok(pack.scene.commands.some(d=>d.layer==='attribution'&&d.text?.includes('OpenStreetMap contributors')));assert.match(pack.scene.source,/Open Database License/);assert.ok(!pack.files.some(f=>/^tiles\//.test(f.name)));assert.ok((await zipBlob(pack.files)).size>10000);
 const bmp=await native.loadImage(pack.files.find(f=>f.name==='basemap.png').data),bc=native.createCanvas(bmp.width,bmp.height);bc.getContext('2d').drawImage(bmp,0,0);assert.ok([...bc.getContext('2d').getImageData(500,1170,900,28).data].some(n=>n<180),'Standalone R basemap.png also contains visible attribution');
 const folder=new URL('osm-r-package/',qa);await fs.mkdir(folder,{recursive:true});for(const f of pack.files)await fs.writeFile(new URL(f.name,folder),f.data);
 const noLegendState={...state,settings:{...settings,legend:false}};populate(noLegendState);
 const noLegends=renderer.render(noLegendState,{canvas:document.createElement('canvas'),width:1200,svg:true});assert.match(noLegends.svg,/OpenStreetMap contributors/);assert.ok(!noLegends.svg.includes('data-legend='));
-const key=streetTilePlan(state.camera,layout(settings)).keys[0],tile=renderer.street.tiles.get(key);renderer.street.tiles.delete(key);const cacheCount=renderer.street.tiles.size;
+const key=planFor(state).keys[0],tile=renderer.street.tiles.get(key);renderer.street.tiles.delete(key);const cacheCount=renderer.street.tiles.size;
 assert.throws(()=>renderer.render(state,{canvas:document.createElement('canvas'),width:3000}),/街道底圖載入中/);assert.equal(renderer.street.tiles.size,cacheCount,'An incomplete export does not create tile requests');
 renderer.street.tiles.set(key,{key,status:'error'});assert.throws(()=>renderer.render(state,{canvas:document.createElement('canvas'),width:1500}),/街道底圖載入失敗/);renderer.street.tiles.set(key,tile);
 console.log('PASS: street-only styling, paused preferences, accurate point placement, reserved attribution, vector symbols, PNG/SVG/PDF, R bundle and no export tile amplification');

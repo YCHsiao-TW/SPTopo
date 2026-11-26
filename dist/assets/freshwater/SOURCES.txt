@@ -1,0 +1,44 @@
+{
+  "release": "2026-11-18.0",
+  "data": "OpenStreetMap via Overture Maps base/water",
+  "attribution": "© OpenStreetMap contributors",
+  "copyright": "https://www.openstreetmap.org/copyright",
+  "licence": "ODbL 1.0",
+  "licenceUrl": "https://opendatacommons.org/licenses/odbl/1-0/",
+  "coverage": [
+    -180,
+    -85,
+    180,
+    85
+  ],
+  "format": "TopoJSON (gzip and SPW1 delta-encoded tiles)",
+  "areaThresholdKm2": [
+    220,
+    18,
+    0.75,
+    0.085,
+    0.012
+  ],
+  "simplificationDegrees": [
+    0.12,
+    0.022,
+    0.0028,
+    0.00082,
+    0.00024
+  ],
+  "quantizationDegrees": [
+    0.005,
+    0.001,
+    0.00025,
+    0.0001,
+    2.5e-05
+  ],
+  "source": "https://docs.overturemaps.org/schema/reference/base/water/",
+  "packingGridMultiples": {
+    "2": 1,
+    "3": 2,
+    "4": 4
+  },
+  "packing": "Original precision retained when snapping would invalidate a polygon or collapse an arc.",
+  "packingProperties": "The two finest tiers retain feature names and styles and omit temporary identifiers and reach counts."
+}

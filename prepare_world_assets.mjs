@@ -10,4 +10,4 @@ await Promise.all(keys.map(async key=>{
 }));
 const index=new URL('terrain-index.json',assets),existing=JSON.parse(await fs.readFile(index,'utf8'));
 await fs.writeFile(index,JSON.stringify([...new Set([...existing,...keys])].sort())+'\n');
-console.log('Prepared four global z1 terrain tiles; existing Taiwan tiles retained.');
+console.log('Prepared four global z1 terrain tiles; regional elevation cache retained.');

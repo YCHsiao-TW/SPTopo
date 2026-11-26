@@ -10,10 +10,17 @@ let failures=0;
 async function check(name,fn){try{await fn();console.log('PASS:',name);}catch(e){failures++;console.error('FAIL:',name,'—',e.message);}}
 
 await check('World preview starts globally and the demo button restores its scope',async()=>{
- const initial=(await savedConfig()).settings;assert.equal(initial.ocean,true);assert.equal(initial.counties,false);assert.equal(initial.towns,false);
+ const initial=await savedConfig();assert.equal(initial.settings.ocean,true);
+ for(const id of ['mapScope','counties','towns','countyLabels','townLabels']){
+  assert.equal(get(id),undefined);
+  assert.ok(!(id in initial.settings));
+ }
+ for(const option of get('region').options)assert.equal(option.hidden,false);
+ assert.equal(get('region').options.filter(option=>option.value==='custom').length,1);
+ for(const value of ['taiwan','all','twkinmen','kinmen','matsu','penghu','lyudao','lanyu','guishan','xiaoliuqiu'])assert.ok(!get('region').options.some(option=>option.value===value));
  assert.equal(get('recordStat').textContent,'9');assert.equal(get('groupStat').textContent,'3/3');
- assert.equal((await savedConfig()).settings.mapScope,'world');assert.equal(get('region').value,'world');
- await get('worldDemo').emit('click');assert.equal((await savedConfig()).settings.mapScope,'world');assert.equal(get('recordStat').textContent,'9');
+ assert.deepEqual(initial.referenceBounds,[-180,-80,180,80]);assert.equal(get('region').value,'world');
+ await get('worldDemo').emit('click');assert.deepEqual((await savedConfig()).referenceBounds,initial.referenceBounds);assert.equal(get('recordStat').textContent,'9');
 });
 
 await check('CSV import, group filters, stable colors, table, language, page dimensions and map controls',async()=>{
@@ -56,11 +63,14 @@ await check('Taxon symbols survive filtering, language changes and settings rest
 await check('Global presets, overseas CSV records, basemap settings and backwards-compatible project restore',async()=>{
  await get('worldSample').emit('click');const worldCSV=await app.downloads.at(-1).blob.text();assert.match(worldCSV,/Sydney/);assert.match(worldCSV,/-74.01/);
  await loadCSV('world.csv',worldCSV);assert.equal(get('recordStat').textContent,'9');
- get('region').value='world';await get('region').emit('change');let cfg=await savedConfig();assert.deepEqual(cfg.referenceBounds,[-180,-80,180,80]);assert.equal(cfg.settings.mapScope,'world');assert.ok(cfg.camera.zoom<3);
+ get('region').value='world';await get('region').emit('change');let cfg=await savedConfig();assert.deepEqual(cfg.referenceBounds,[-180,-80,180,80]);assert.ok(cfg.camera.zoom<3);
  get('countryLabels').checked=true;await get('countryLabels').emit('change');cfg=await savedConfig();await loadConfig(cfg);assert.equal((await savedConfig()).settings.countryLabels,true);
- const bad=structuredClone(cfg);bad.settings.mapScope='invalid';await loadConfig(bad);assert.deepEqual(await savedConfig(),cfg);
- delete cfg.settings.mapScope;await loadConfig(cfg);assert.equal((await savedConfig()).settings.mapScope,'auto');
- get('region').value='taiwan';await get('region').emit('change');assert.equal((await savedConfig()).settings.mapScope,'auto');
+ const legacy=structuredClone(cfg);Object.assign(legacy.settings,{mapScope:'taiwan',counties:true,towns:true,countyLabels:true,townLabels:true});
+ await loadConfig(legacy);assert.deepEqual(await savedConfig(),cfg);
+ const taiwan=get('region').options.find(option=>option.value==='country_TWN');
+ assert.equal(taiwan.parentElement.tagName,'OPTGROUP');
+ get('region').value=taiwan.value;await get('region').emit('change');
+ cfg=await savedConfig();assert.ok(cfg.camera.zoom>4);await loadConfig(cfg);assert.equal(get('region').value,taiwan.value);
  await loadCSV('records.csv',csv);get('countryLabels').checked=false;await get('countryLabels').emit('change');
 });
 
@@ -166,7 +176,7 @@ await check('Settings reject identical longitude/latitude columns before applyin
 
 await check('Valid settings round-trip, older settings retain page defaults, and incompatible columns are rejected',async()=>{
  await loadCSV('records.csv',csv);const cfg=await savedConfig();cfg.settings.radius=11;cfg.settings.pageWidth=18;cfg.settings.pageHeight=24;cfg.colors.TES='#123456';cfg.selected=['TES','TWS'];cfg.referenceBounds=[118.1,24.35,118.52,24.57];
- await loadConfig(cfg);assert.deepEqual(await savedConfig(),cfg);assert.equal(get('groupStat').textContent,'2/3');assert.equal(get('region').value,'kinmen');
+ await loadConfig(cfg);assert.deepEqual(await savedConfig(),cfg);assert.equal(get('groupStat').textContent,'2/3');assert.equal(get('region').value,'custom');
  const bad=structuredClone(cfg);bad.columns.lon='missing';await loadConfig(bad);assert.deepEqual(await savedConfig(),cfg);
  for(const mutate of [c=>c.settings.radius='large',c=>c.selected='TES',c=>c.camera.zoom=99,c=>c.settings.pieMode='other']){const invalid=structuredClone(cfg);mutate(invalid);await loadConfig(invalid);assert.deepEqual(await savedConfig(),cfg);}
  const legacy=structuredClone(cfg);for(const key of ['pageWidth','pageHeight','legendPosition','legendColumns','legendFont','legendSymbol','legendX','legendY','siteNumbers','siteLabelSize','terrainQuality'])delete legacy.settings[key];await loadConfig(legacy);assert.equal(get('pageWidth').value,25);assert.equal(get('pageHeight').value,20);assert.equal(get('legendPosition').value,'right');assert.equal(get('siteNumbers').checked,false);assert.equal(get('terrainQuality').value,'auto');
@@ -227,9 +237,9 @@ await check('Complete projects restore original records, layout, filters, site I
 await check('Marine/freshwater presets, saved water settings and legacy compatibility',async()=>{
  await get('marineDemo').emit('click');let cfg=await savedConfig();assert.equal(get('recordStat').textContent,'8');assert.equal(cfg.settings.bathymetry,true);assert.equal(cfg.settings.isobaths,false);assert.equal(cfg.settings.ocean,true);assert.equal(cfg.settings.terrain,false);assert.deepEqual(cfg.referenceBounds,[116,5,150,35]);
  const marine=structuredClone(cfg);await loadConfig(marine);assert.deepEqual(await savedConfig(),marine);
- await get('freshwaterDemo').emit('click');cfg=await savedConfig();assert.equal(cfg.settings.rivers,true);assert.equal(cfg.settings.lakes,true);assert.equal(cfg.settings.bathymetry,false);assert.equal(cfg.settings.ocean,false);assert.deepEqual(cfg.referenceBounds,[-94,40,-72,50]);assert.equal(get('recordStat').textContent,'5');
- const invalid=structuredClone(cfg);invalid.settings.lakes='true';await loadConfig(invalid);assert.deepEqual(await savedConfig(),cfg);
- for(const key of ['ocean','bathymetry','isobaths','rivers','lakes'])delete cfg.settings[key];await loadConfig(cfg);const legacy=await savedConfig();for(const key of ['ocean','bathymetry','isobaths','rivers','lakes'])assert.equal(legacy.settings[key],key==='ocean');
+ await get('freshwaterDemo').emit('click');cfg=await savedConfig();assert.equal(cfg.settings.freshwater,true);assert.equal(cfg.settings.bathymetry,false);assert.equal(cfg.settings.ocean,false);assert.deepEqual(cfg.referenceBounds,[-94,40,-72,50]);assert.equal(get('recordStat').textContent,'5');
+ const invalid=structuredClone(cfg);invalid.settings.freshwater='true';await loadConfig(invalid);assert.deepEqual(await savedConfig(),cfg);
+ for(const key of ['ocean','bathymetry','isobaths','freshwater'])delete cfg.settings[key];await loadConfig(cfg);const legacy=await savedConfig();for(const key of ['ocean','bathymetry','isobaths','freshwater'])assert.equal(legacy.settings[key],key==='ocean');
 });
 await check('Required water layers block exports with loading/failure explanations',async()=>{
  const original=MapRenderer.prototype.status,count=app.downloads.length;

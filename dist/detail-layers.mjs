@@ -2,15 +2,26 @@ import {geographicOverlap} from './longitude.mjs';
 // Prepared, same-origin vectors. Never query a public OSM API while browsing.
 async function readJSON(url){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
- try{const r=await fetch(url,{signal:controller.signal});if(!r.ok)throw Error('Detail HTTP '+r.status);return await r.json();}finally{clearTimeout(timer);}
+ try{
+  const response=await fetch(url,{signal:controller.signal});
+  if(!response.ok)throw Error('Detail HTTP '+response.status);
+  if(!url.endsWith('.gz'))return await response.json();
+  const bytes=new Uint8Array(await response.arrayBuffer());
+  // Static hosts may already have applied HTTP Content-Encoding.
+  if(bytes[0]===0x1f&&bytes[1]===0x8b){
+   const content=new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip')));
+   return url.endsWith('.bin.gz')?new Uint8Array(await content.arrayBuffer()):await content.json();
+  }
+  return url.endsWith('.bin.gz')?bytes:JSON.parse(new TextDecoder().decode(bytes));
+ }finally{clearTimeout(timer);}
 }
 const validBox=b=>Array.isArray(b)&&b.length===4&&b.every(Number.isFinite)&&b[0]<=b[2]&&b[1]<=b[3];
-const validFile=n=>typeof n==='string'&&/^[\w/-]+\.json$/.test(n)&&!n.includes('..');
+const validFile=n=>typeof n==='string'&&/^[\w/-]+\.(?:json(?:\.gz)?|bin\.gz)$/.test(n)&&!n.includes('..');
 export class DetailLayers{
- constructor(name,onChange){this.name=name;this.onChange=onChange;this.index=null;this.indexState='idle';this.files=new Map();this.wanted=[];this.queue=[];this.running=0;}
+ constructor(name,onChange,indexFile='index.json'){this.name=name;this.indexFile=indexFile;this.onChange=onChange;this.index=null;this.indexState='idle';this.files=new Map();this.wanted=[];this.queue=[];this.running=0;}
  async init(){
   if(this.indexState!=='idle')return;this.indexState='loading';
-  try{const d=await readJSON(`./assets/${this.name}/index.json`);if(!validFile(d.overview)||!d.tiles||Object.values(d.tiles).some(t=>!validBox(t.bbox)||!validFile(t.file)))throw Error('Invalid detail index');this.index=d;this.indexState='ready';}catch{this.indexState='error';}this.onChange();
+  try{const d=await readJSON(`./assets/${this.name}/${this.indexFile}`);if(!validFile(d.overview)||!d.tiles||Object.values(d.tiles).some(t=>!validBox(t.bbox)||!validFile(t.file)))throw Error('Invalid detail index');this.index=d;this.indexState='ready';}catch{this.indexState='error';}this.onChange();
  }
  plan(camera,bounds,curved=false){
   if(!this.index)return [];
@@ -25,9 +36,10 @@ export class DetailLayers{
   const failed=this.indexState==='error'||names.some(n=>this.files.get(n)?.state==='error'),ready=this.indexState==='ready'&&names.every(n=>this.files.get(n)?.state==='ready');return {ready,failed,pending:!ready&&!failed};
  }
  prune(){for(const [n,f] of this.files){if(this.files.size<=24)break;if(!this.wanted.includes(n)&&f.state!=='loading')this.files.delete(n);}}
+ prepare(data){return data;}
  pump(){while(this.running<3&&this.queue.length){const n=this.queue.shift(),f=this.files.get(n);f.state='loading';this.running++;(async()=>{
-  try{const d=await readJSON(`./assets/${this.name}/${n}`);if(d.type!=='FeatureCollection'||!Array.isArray(d.features)||d.features.some(f=>!validBox(f.bbox)||!f.geometry||!f.properties))throw Error('Invalid detail geometry');f.data=d;f.state='ready';}catch{f.state='error';}finally{this.running--;this.prune();this.onChange();this.pump();}
+  try{const d=this.prepare(await readJSON(`./assets/${this.name}/${n}`));if(d.type!=='FeatureCollection'||!Array.isArray(d.features)||d.features.some(f=>!validBox(f.bbox)||!f.geometry||!f.properties))throw Error('Invalid detail geometry');f.data=d;f.state='ready';}catch{f.state='error';}finally{this.running--;this.prune();this.onChange();this.pump();}
  })();}}
- data(camera,bounds,curved=false){const names=this.plan(camera,bounds,curved);if(this.indexState!=='ready'||names.some(n=>this.files.get(n)?.state!=='ready'))return null;let features=names.flatMap(n=>this.files.get(n).data.features);if(this.name==='hydro-detail'){const seen=new Set();features=features.filter(f=>{if(f.properties.id===undefined)return true;const id=f.properties.kind+':'+f.properties.id;if(seen.has(id))return false;seen.add(id);return true;});}return {type:'FeatureCollection',features};}
+ data(camera,bounds,curved=false){const names=this.plan(camera,bounds,curved);if(this.indexState!=='ready'||names.some(n=>this.files.get(n)?.state!=='ready'))return null;const features=names.flatMap(n=>this.files.get(n).data.features);return {type:'FeatureCollection',features};}
  retry(){if(this.indexState==='error')this.indexState='idle';for(const [n,f] of this.files)if(f.state==='error')this.files.delete(n);this.onChange();}
 }

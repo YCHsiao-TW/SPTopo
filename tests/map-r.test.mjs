@@ -19,22 +19,22 @@ renderer.terrain.request=key=>{const tile=renderer.terrain.tiles.get(key);if(!ti
 const labels=MARKER_SHAPES.map((s,i)=>i===0?'001':i===1?'Species "quoted" 漢字':s);
 const rows=[['lat','lon','species'],...labels.map((name,i)=>[-50+25*Math.floor(i/5),-140+(i%5)*65,name]),[10,120,labels[0]],[10,120,labels[1]],[10,120,labels[1]],[10,120,labels[2]],[24.123456789,121.123456789,'Excluded']];
 const raw=parseCSV(csvEncode(rows)),columns=detectColumns(raw.headers),{valid}=normalizeRows(raw,columns),groups=[...labels,'Excluded'],selected=new Set(labels);
-const settings={mapScope:'world',projection:'mercator',terrain:true,terrainQuality:'auto',hillshade:false,shadow:.28,direction:315,angle:45,ecologyTheme:'off',countries:true,countryLabels:true,counties:false,towns:false,ocean:true,bathymetry:true,isobaths:true,lakes:true,rivers:true,legend:true,legendTitle:'species',legendFont:13,legendSymbol:5,radius:10,autoSize:true,frame:true,grid:true,northArrow:true,scaleBar:true,pies:true,pieMode:'count',digits:5,siteNumbers:true,siteLabelSize:11,pageWidth:25,pageHeight:20};
+const settings={mapScope:'world',projection:'mercator',terrain:true,terrainQuality:'auto',hillshade:false,shadow:.28,direction:315,angle:45,ecologyTheme:'off',countries:true,countryLabels:true,counties:false,towns:false,ocean:true,bathymetry:true,isobaths:true,freshwater:true,legend:true,legendTitle:'species',legendFont:13,legendSymbol:5,radius:10,autoSize:true,frame:true,grid:true,northArrow:true,scaleBar:true,pies:true,pieMode:'count',digits:5,siteNumbers:true,siteLabelSize:11,pageWidth:25,pageHeight:20};
 const siteList=withSiteIds(groupSites(valid.filter(p=>selected.has(p.group)),5,'count',true),siteCatalog(valid,settings),true);
 const state={settings,raw,columns,filename:'lat-lon-species.csv',valid,invalid:[],groups,selected,sites:siteList,language:'en',demo:true,referenceBounds:[-180,-80,180,80],camera:defaultCamera(settings,[-180,-80,180,80]),colors:Object.fromEntries(groups.map(g=>[g,'#0072b2'])),shapes:Object.fromEntries(labels.map((g,i)=>[g,MARKER_SHAPES[i]])),displayNames:{'001':'Taxon 001'},legendEdits:{taxa:{font:10,italic:true,title:'Exported taxa'}}};
-renderer.status(state);await Promise.all([...renderer.water.layers.values()].map(v=>v.promise));assert.ok(renderer.status(state).ready);
+for(let i=0;i<300&&!renderer.status(state).ready;i++)await new Promise(r=>setTimeout(r,20));assert.ok(renderer.status(state).ready);
 const runner=process.env.WORLDBIO_RSCRIPT||path.join(root,'qa/codegen-r/Rscript');await fs.access(runner);
 let first;
 for(const projection of ['mercator','equalEarth','robinson']){
  const s={...settings,projection,terrainQuality:projection==='equalEarth'?'fast':'auto'},scene={...state,settings:s,camera:defaultCamera(s,[-180,-80,180,80],projection==='mercator'?undefined:150)};
- assert.ok(renderer.status(scene).ready);
+ for(let i=0;i<300&&!renderer.status(scene).ready;i++)await new Promise(r=>setTimeout(r,20));assert.ok(renderer.status(scene).ready);
  const bundle=createMapPackage(scene,renderer,{width:1500});
  assert.ok(bundle.scene.commands.some(d=>d.type==='gradient'),'Depth uses a continuous gradient');
  assert.ok(bundle.scene.commands.some(d=>d.layer==='legend-elevation'));
  assert.ok(bundle.scene.commands.some(d=>d.layer==='legend-taxa'&&d.taxon==='001'&&d.type==='marker'));
  assert.ok(bundle.scene.commands.some(d=>d.layer==='demo'));
- assert.equal(Object.keys(bundle.scene.shapes).length,24);
- const table=parseCSV(bundle.points);assert.equal(table.rows.length,28);assert.ok(!table.rows.flat().includes('Excluded'));
+ assert.equal(Object.keys(bundle.scene.shapes).length,MARKER_SHAPES.length-1);
+ const table=parseCSV(bundle.points);assert.equal(table.rows.length,labels.length+3);assert.ok(!table.rows.flat().includes('Excluded'));
  assert.equal(table.rows.filter(r=>r[2]==='120'&&r[3]==='10').reduce((n,r)=>n+Number(r[8]),0),4,'Count-weighted pie data retained');
  const folder=path.join(qa,projection);await fs.mkdir(folder,{recursive:true});for(const f of bundle.files)await fs.writeFile(path.join(folder,f.name),f.data);
  const web=renderer.render(scene,{canvas:document.createElement('canvas'),width:1500}).canvas;await fs.writeFile(path.join(folder,'canvas-reference.png'),web.toBuffer('image/png'));
@@ -58,7 +58,7 @@ const editedCanvas=native.createCanvas(1000,800);editedCanvas.getContext('2d').d
 assert.ok(pixel[0]>200&&pixel[1]<50&&pixel[2]<100,'Edited taxon color is used by the actual R point renderer');
 const noLegend=editedCanvas.getContext('2d').getImageData(805,40,190,700).data;assert.ok([...noLegend].every(n=>n===255),'Legend-off removes the actual legend output');
 // Header-only points/taxa work for a basemap-only export, including no legend command.
-const empty={...state,settings:{...settings,legend:false,terrain:false,ocean:false,bathymetry:false,isobaths:false,lakes:false,rivers:false,pageWidth:20,pageHeight:25},groups:[],selected:new Set(),sites:[]};
+const empty={...state,settings:{...settings,legend:false,terrain:false,ocean:false,bathymetry:false,isobaths:false,freshwater:false,pageWidth:20,pageHeight:25},groups:[],selected:new Set(),sites:[]};
 const emptyBundle=createMapPackage(empty,renderer,{width:800}),folder=path.join(qa,'empty');await fs.mkdir(folder,{recursive:true});for(const f of emptyBundle.files)await fs.writeFile(path.join(folder,f.name),f.data);
 execFileSync(runner,[path.join(folder,'map.R')],{encoding:'utf8',timeout:60000});
 const emptyOut=(await fs.readdir(path.join(folder,'output'))).sort().at(-1),emptyImage=await native.loadImage(path.join(folder,'output',emptyOut,'map.png'));assert.equal(emptyImage.width,800);assert.equal(emptyImage.height,1000);
