@@ -16,6 +16,7 @@ get('freshwater').checked=true;
 await get('freshwater').emit('change');
 const cfg=await savedConfig();
 assert.ok(cfg.settings.coastDetail&&cfg.settings.freshwater);
+assert.equal(cfg.settings.terrain,initial.settings.terrain);
 
 await get('saveProject').emit('click');
 const project=await downloads.at(-1).blob.text();
@@ -74,4 +75,17 @@ try{
   assert.equal(downloads.length,n);
  }
 }finally{MapRenderer.prototype.status=status;}
-console.log('PASS: automatic coastline, legacy settings and project migration, freshwater control, street map isolation and image/R readiness guards');
+
+for(const terrain of [true,false]){
+ get('terrain').checked=terrain;
+ await get('terrain').emit('change');
+ for(const [demo,freshwater] of [['freshwaterDemo',true],['marineDemo',false]]){
+  await get(demo).emit('click');
+  const {settings}=await savedConfig();
+  assert.equal(settings.terrain,terrain,demo+' preserves the elevation setting');
+  assert.equal(get('terrain').checked,terrain);
+  assert.equal(settings.freshwater,freshwater);
+  assert.equal(settings.bathymetry,!freshwater);
+ }
+}
+console.log('PASS: automatic coastline, freshwater controls and demos, legacy settings migration, and image/R readiness guards');
